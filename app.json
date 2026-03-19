@@ -6,13 +6,15 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+    "scheme": "nfit",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#E6F4FE"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.nfit.app"
     },
     "android": {
       "adaptiveIcon": {
@@ -21,10 +23,24 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "package": "com.nfit.app",
+      "permissions": [
+        "android.permission.ACTIVITY_RECOGNITION",
+        "android.permission.BODY_SENSORS",
+        "android.permission.HIGH_SAMPLING_RATE_SENSORS",
+        "android.permission.POST_NOTIFICATIONS"
+      ]
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-notifications"
+    ],
+    "experiments": {
+      "typedRoutes": true
     }
   }
 }
