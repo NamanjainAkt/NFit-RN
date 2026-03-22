@@ -2,21 +2,14 @@ import { useEffect, useState, useRef } from 'react';
 import { View, Text, StyleSheet, Dimensions, Animated, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Pedometer } from 'expo-sensors';
+import { MaterialIcons } from '@expo/vector-icons';
 import { useUserStore } from '../../store/userStore';
 import { useFitnessStore } from '../../store/fitnessStore';
+import { getColors } from '../../utils/theme';
 import { format } from 'date-fns';
+import { requestNotificationPermissions, sendGoalReachedNotification, sendStreakNotification, scheduleDailyReminder } from '../../utils/notifications';
 
 const { width } = Dimensions.get('window');
-
-function Icon({ name }: { name: string }) {
-  const icons: Record<string, string> = {
-    steps: '\u221E',
-    fire: '\u2044',
-    location: '\u25CB',
-    trophy: '\u2606',
-  };
-  return <Text style={{ fontSize: 24 }}>{icons[name] || '\u2022'}</Text>;
-}
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -25,26 +18,24 @@ export default function HomeScreen() {
   const hasCompletedOnboarding = useUserStore((state) => state.hasCompletedOnboarding);
   const updateStepStreak = useUserStore((state) => state.updateStepStreak);
   
-  const { todaySteps, setTodaySteps, calculateCalories, calculateDistance } = useFitnessStore();
-  const darkMode = profile?.darkMode ?? false;
+  const { todaySteps, todayFloors, todayActiveMinutes, setTodaySteps, setTodayFloors, setTodayActiveMinutes, calculateCalories, calculateDistance } = useFitnessStore();
   
-  const c = darkMode ? {
-    bg: '#000000', surface: '#1A1A1A', border: '#333333',
-    primary: '#FFFFFF', secondary: '#B0B0B0', tertiary: '#707070',
-    success: '#CCCCCC'
-  } : {
-    bg: '#FFFFFF', surface: '#F5F5F5', border: '#E0E0E0',
-    primary: '#000000', secondary: '#666666', tertiary: '#999999',
-    success: '#333333'
-  };
-
+  const darkMode = profile?.darkMode ?? false;
+  const c = getColors(darkMode);
+  
   const [isSimulated, setIsSimulated] = useState(false);
+  const [goalNotified, setGoalNotified] = useState(false);
   const progressAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     if (!hasCompletedOnboarding) router.replace('/onboarding');
   }, [hasCompletedOnboarding]);
+
+  useEffect(() => {
+    requestNotificationPermissions();
+    scheduleDailyReminder(20, 0);
+  }, []);
 
   useEffect(() => { checkPedometerPermission(); }, []);
 
@@ -53,7 +44,12 @@ export default function HomeScreen() {
       const goal = profile.dailyStepGoal || 10000;
       const progress = Math.min(todaySteps / goal, 1);
       Animated.spring(progressAnim, { toValue: progress, useNativeDriver: false, tension: 50, friction: 10 }).start();
-      if (progress >= 1) {
+      if (progress >= 1 && !goalNotified) {
+        setGoalNotified(true);
+        sendGoalReachedNotification(todaySteps);
+        if (stepStreak > 0 && stepStreak % 7 === 0) {
+          sendStreakNotification(stepStreak);
+        }
         Animated.loop(
           Animated.sequence([
             Animated.timing(pulseAnim, { toValue: 1.05, duration: 500, useNativeDriver: true }),
@@ -62,30 +58,51 @@ export default function HomeScreen() {
         ).start();
       }
     }
-  }, [todaySteps, profile]);
+  }, [todaySteps, profile, stepStreak, goalNotified]);
 
   const checkPedometerPermission = async () => {
     if (Platform.OS === 'android') {
       setIsSimulated(true);
-      setTodaySteps(Math.floor(Math.random() * 5000) + 1000);
+      const simulatedSteps = Math.floor(Math.random() * 5000) + 1000;
+      setTodaySteps(simulatedSteps);
+      setTodayFloors(Math.floor(simulatedSteps / 200));
+      setTodayActiveMinutes(Math.floor(simulatedSteps / 100));
       return;
     }
     try {
       const available = await Pedometer.isAvailableAsync();
-      if (!available) { setIsSimulated(true); setTodaySteps(Math.floor(Math.random() * 5000) + 1000); return; }
+      if (!available) { 
+        setIsSimulated(true); 
+        const simulatedSteps = Math.floor(Math.random() * 5000) + 1000;
+        setTodaySteps(simulatedSteps);
+        setTodayFloors(Math.floor(simulatedSteps / 200));
+        setTodayActiveMinutes(Math.floor(simulatedSteps / 100));
+        return; 
+      }
       const result = await Pedometer.requestPermissionsAsync();
       if (result.granted) {
         const sub = Pedometer.watchStepCount((data) => {
           setTodaySteps(data.steps);
+          setTodayFloors(Math.floor(data.steps / 200));
+          setTodayActiveMinutes(Math.floor(data.steps / 100));
           if (profile) {
             const goal = profile.dailyStepGoal || 10000;
             if (data.steps >= goal) updateStepStreak(format(new Date(), 'yyyy-MM-dd'));
           }
         });
-      } else { setIsSimulated(true); setTodaySteps(Math.floor(Math.random() * 5000) + 1000); }
+      } else { 
+        setIsSimulated(true); 
+        const simulatedSteps = Math.floor(Math.random() * 5000) + 1000;
+        setTodaySteps(simulatedSteps);
+        setTodayFloors(Math.floor(simulatedSteps / 200));
+        setTodayActiveMinutes(Math.floor(simulatedSteps / 100));
+      }
     } catch (e) {
       setIsSimulated(true);
-      setTodaySteps(Math.floor(Math.random() * 5000) + 1000);
+      const simulatedSteps = Math.floor(Math.random() * 5000) + 1000;
+      setTodaySteps(simulatedSteps);
+      setTodayFloors(Math.floor(simulatedSteps / 200));
+      setTodayActiveMinutes(Math.floor(simulatedSteps / 100));
     }
   };
 
@@ -99,10 +116,10 @@ export default function HomeScreen() {
   const ringSize = width * 0.65;
 
   return (
-    <View style={[styles.container, { backgroundColor: c.bg }]}>
+    <View style={[styles.container, { backgroundColor: c.background }]}>
       <View style={styles.header}>
-        <Text style={[styles.greeting, { color: c.primary }]}>Hello, {profile.name}</Text>
-        <Text style={[styles.date, { color: c.tertiary }]}>{format(new Date(), 'EEEE, MMMM d')}</Text>
+        <Text style={[styles.greeting, { color: c.text }]}>Hello, {profile.name}</Text>
+        <Text style={[styles.date, { color: c.textTertiary }]}>{format(new Date(), 'EEEE, MMMM d')}</Text>
       </View>
       <View style={styles.ringContainer}>
         <Animated.View style={[styles.ringWrapper, { transform: [{ scale: pulseAnim }] }]}>
@@ -110,30 +127,47 @@ export default function HomeScreen() {
             <View style={[styles.progressRing, { width: ringSize, height: ringSize, borderRadius: ringSize / 2, borderWidth: 24, borderColor: goalReached ? c.success : c.primary }]} />
             <View style={styles.ringContent}>
               <Text style={[styles.stepsCount, { color: goalReached ? c.success : c.primary }]}>{todaySteps.toLocaleString()}</Text>
-              <Text style={[styles.stepsLabel, { color: c.tertiary }]}>steps</Text>
-              <Text style={[styles.goalText, { color: c.tertiary }]}>{goalReached ? 'Goal reached!' : 'of ' + goal.toLocaleString()}</Text>
+              <Text style={[styles.stepsLabel, { color: c.textTertiary }]}>steps</Text>
+              <Text style={[styles.goalText, { color: c.textTertiary }]}>{goalReached ? 'Goal reached!' : 'of ' + goal.toLocaleString()}</Text>
             </View>
           </View>
         </Animated.View>
       </View>
       <View style={styles.statsRow}>
         <View style={[styles.statCard, { backgroundColor: c.surface }]}>
-          <Icon name="fire" />
-          <Text style={[styles.statValue, { color: c.primary }]}>{calories}</Text>
-          <Text style={[styles.statLabel, { color: c.tertiary }]}>calories</Text>
+          <MaterialIcons name="local-fire-department" size={24} color={c.text} />
+          <Text style={[styles.statValue, { color: c.text }]}>{calories}</Text>
+          <Text style={[styles.statLabel, { color: c.textTertiary }]}>calories</Text>
         </View>
         <View style={[styles.statCard, { backgroundColor: c.surface }]}>
-          <Icon name="location" />
-          <Text style={[styles.statValue, { color: c.primary }]}>{distance.toFixed(2)}</Text>
-          <Text style={[styles.statLabel, { color: c.tertiary }]}>{distanceUnit}</Text>
+          <MaterialIcons name="straighten" size={24} color={c.text} />
+          <Text style={[styles.statValue, { color: c.text }]}>{distance.toFixed(2)}</Text>
+          <Text style={[styles.statLabel, { color: c.textTertiary }]}>{distanceUnit}</Text>
         </View>
         <View style={[styles.statCard, { backgroundColor: c.surface }]}>
-          <Icon name="trophy" />
-          <Text style={[styles.statValue, { color: c.primary }]}>{stepStreak}</Text>
-          <Text style={[styles.statLabel, { color: c.tertiary }]}>streak</Text>
+          <MaterialIcons name="emoji-events" size={24} color={c.text} />
+          <Text style={[styles.statValue, { color: c.text }]}>{stepStreak}</Text>
+          <Text style={[styles.statLabel, { color: c.textTertiary }]}>streak</Text>
         </View>
       </View>
-      {isSimulated && <View style={[styles.warningCard, { backgroundColor: c.surface, borderColor: c.border, borderWidth: 1 }]}><Text style={[styles.warningText, { color: c.tertiary }]}>Demo mode - steps simulated</Text></View>}
+      <View style={styles.statsRow}>
+        <View style={[styles.statCard, { backgroundColor: c.surface }]}>
+          <MaterialIcons name="stairs" size={24} color={c.text} />
+          <Text style={[styles.statValue, { color: c.text }]}>{todayFloors}</Text>
+          <Text style={[styles.statLabel, { color: c.textTertiary }]}>floors</Text>
+        </View>
+        <View style={[styles.statCard, { backgroundColor: c.surface }]}>
+          <MaterialIcons name="timer" size={24} color={c.text} />
+          <Text style={[styles.statValue, { color: c.text }]}>{todayActiveMinutes}</Text>
+          <Text style={[styles.statLabel, { color: c.textTertiary }]}>active min</Text>
+        </View>
+        <View style={[styles.statCard, { backgroundColor: c.surface }]}>
+          <MaterialIcons name="trending-up" size={24} color={c.text} />
+          <Text style={[styles.statValue, { color: c.text }]}>{Math.round((todaySteps / goal) * 100)}%</Text>
+          <Text style={[styles.statLabel, { color: c.textTertiary }]}>goal</Text>
+        </View>
+      </View>
+      {isSimulated && <View style={[styles.warningCard, { backgroundColor: c.surface, borderColor: c.border, borderWidth: 1 }]}><Text style={[styles.warningText, { color: c.textTertiary }]}>Demo mode - steps simulated</Text></View>}
     </View>
   );
 }
@@ -151,7 +185,7 @@ const styles = StyleSheet.create({
   stepsCount: { fontSize: 48, fontWeight: 'bold' },
   stepsLabel: { fontSize: 18, marginTop: -4 },
   goalText: { fontSize: 14, marginTop: 8 },
-  statsRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 20 },
+  statsRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 },
   statCard: { flex: 1, borderRadius: 16, padding: 16, marginHorizontal: 4, alignItems: 'center', elevation: 2 },
   statValue: { fontSize: 24, fontWeight: 'bold', marginTop: 8 },
   statLabel: { fontSize: 12, marginTop: 4 },

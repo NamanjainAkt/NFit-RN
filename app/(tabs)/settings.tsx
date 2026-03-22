@@ -1,23 +1,29 @@
-import { View, Text, StyleSheet, TouchableOpacity, Switch, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Switch, TextInput, Alert, ActivityIndicator } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 import { useUserStore } from '../../store/userStore';
+import { useFitnessStore } from '../../store/fitnessStore';
 import { useRouter } from 'expo-router';
+import { getColors } from '../../utils/theme';
+import { isGoogleFitAvailable, requestGoogleFitPermissions, syncGoogleFitData } from '../../utils/googleFit';
+import { shareData, ExportData } from '../../utils/export';
+import { useState } from 'react';
 
 export default function SettingsScreen() {
   const router = useRouter();
   const profile = useUserStore((state) => state.profile);
+  const workouts = useUserStore((state) => state.workouts);
   const updateProfile = useUserStore((state) => state.updateProfile);
   const setHasCompletedOnboarding = useUserStore((state) => state.setHasCompletedOnboarding);
+  const stepHistory = useFitnessStore((state) => state.stepHistory);
+  
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [googleFitEnabled, setGoogleFitEnabled] = useState(false);
 
   if (!profile) return null;
 
   const darkMode = profile.darkMode ?? false;
-  const c = darkMode ? {
-    bg: '#000000', surface: '#1A1A1A', border: '#333333',
-    primary: '#FFFFFF', secondary: '#B0B0B0', tertiary: '#707070',
-  } : {
-    bg: '#FFFFFF', surface: '#F5F5F5', border: '#E0E0E0',
-    primary: '#000000', secondary: '#666666', tertiary: '#999999',
-  };
+  const c = getColors(darkMode);
 
   const handleDarkModeToggle = (value: boolean) => {
     updateProfile({ darkMode: value });
@@ -27,10 +33,31 @@ export default function SettingsScreen() {
     updateProfile({ useMetric: value });
   };
 
-  const handleGoalChange = (text: string) => {
+  const handleStepGoalChange = (text: string) => {
     const goal = parseInt(text, 10);
     if (!isNaN(goal) && goal > 0) {
       updateProfile({ dailyStepGoal: goal });
+    }
+  };
+
+  const handleCalorieGoalChange = (text: string) => {
+    const goal = parseInt(text, 10);
+    if (!isNaN(goal) && goal > 0) {
+      updateProfile({ dailyCalorieGoal: goal });
+    }
+  };
+
+  const handleWeightGoalChange = (text: string) => {
+    const goal = parseFloat(text);
+    if (!isNaN(goal) && goal > 0) {
+      updateProfile({ weightGoal: goal });
+    }
+  };
+
+  const handleWorkoutGoalChange = (text: string) => {
+    const goal = parseInt(text, 10);
+    if (!isNaN(goal) && goal > 0) {
+      updateProfile({ weeklyWorkoutGoal: goal });
     }
   };
 
@@ -41,69 +68,225 @@ export default function SettingsScreen() {
     ]);
   };
 
+  const handleGoogleFitToggle = async (value: boolean) => {
+    if (value) {
+      const available = await isGoogleFitAvailable();
+      if (!available) {
+        Alert.alert('Not Available', 'Google Fit is not available on this device.');
+        return;
+      }
+      const granted = await requestGoogleFitPermissions();
+      if (!granted) {
+        Alert.alert('Permission Denied', 'Please grant Google Fit permissions in settings.');
+        return;
+      }
+    }
+    setGoogleFitEnabled(value);
+  };
+
+  const handleSyncData = async () => {
+    setIsSyncing(true);
+    try {
+      const data = await syncGoogleFitData();
+      if (data) {
+        Alert.alert('Sync Complete', `Synced ${data.steps} steps from Google Fit.`);
+      } else {
+        Alert.alert('Not Available', 'Google Fit sync is not available. Use manual entry in demo mode.');
+      }
+    } catch (error) {
+      Alert.alert('Sync Failed', 'Unable to sync with Google Fit.');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleExportData = () => {
+    Alert.alert('Export Data', 'Choose export format', [
+      { text: 'Cancel', style: 'cancel' },
+      { 
+        text: 'JSON', 
+        onPress: async () => {
+          setIsExporting(true);
+          const exportData: ExportData = {
+            profile: {
+              name: profile.name,
+              weight: profile.weight,
+              height: profile.height,
+              age: profile.age,
+              dailyStepGoal: profile.dailyStepGoal,
+              dailyCalorieGoal: profile.dailyCalorieGoal || 500,
+              weightGoal: profile.weightGoal || profile.weight,
+              weeklyWorkoutGoal: profile.weeklyWorkoutGoal || 3,
+            },
+            stepHistory,
+            workouts,
+            exportedAt: new Date().toISOString(),
+          };
+          const success = await shareData(exportData, 'json');
+          if (!success) {
+            Alert.alert('Export Failed', 'Unable to export data.');
+          }
+          setIsExporting(false);
+        }
+      },
+      { 
+        text: 'CSV', 
+        onPress: async () => {
+          setIsExporting(true);
+          const exportData: ExportData = {
+            profile: {
+              name: profile.name,
+              weight: profile.weight,
+              height: profile.height,
+              age: profile.age,
+              dailyStepGoal: profile.dailyStepGoal,
+              dailyCalorieGoal: profile.dailyCalorieGoal || 500,
+              weightGoal: profile.weightGoal || profile.weight,
+              weeklyWorkoutGoal: profile.weeklyWorkoutGoal || 3,
+            },
+            stepHistory,
+            workouts,
+            exportedAt: new Date().toISOString(),
+          };
+          const success = await shareData(exportData, 'csv');
+          if (!success) {
+            Alert.alert('Export Failed', 'Unable to export data.');
+          }
+          setIsExporting(false);
+        }
+      },
+    ]);
+  };
+
   return (
-    <View style={[styles.container, { backgroundColor: c.bg }]}>
+    <View style={[styles.container, { backgroundColor: c.background }]}>
       <View style={styles.header}>
-        <Text style={[styles.title, { color: c.primary }]}>Settings</Text>
-        <Text style={[styles.subtitle, { color: c.tertiary }]}>Customize your experience</Text>
+        <Text style={[styles.title, { color: c.text }]}>Settings</Text>
+        <Text style={[styles.subtitle, { color: c.textTertiary }]}>Customize your experience</Text>
       </View>
 
       <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: c.tertiary }]}>Profile</Text>
+        <Text style={[styles.sectionTitle, { color: c.textTertiary }]}>Profile</Text>
         <View style={[styles.card, { backgroundColor: c.surface }]}>
           <View style={[styles.row, { borderBottomColor: c.border }]}>
-            <Text style={[styles.rowLabel, { color: c.primary }]}>Name</Text>
-            <Text style={[styles.rowValue, { color: c.tertiary }]}>{profile.name}</Text>
+            <View style={styles.rowLeft}>
+              <MaterialIcons name="person" size={24} color={c.text} />
+              <Text style={[styles.rowLabel, { color: c.text }]}>Name</Text>
+            </View>
+            <Text style={[styles.rowValue, { color: c.textTertiary }]}>{profile.name}</Text>
           </View>
           <View style={[styles.row, { borderBottomColor: c.border }]}>
-            <Text style={[styles.rowLabel, { color: c.primary }]}>Weight</Text>
-            <Text style={[styles.rowValue, { color: c.tertiary }]}>{profile.weight} {profile.useMetric ? 'kg' : 'lbs'}</Text>
+            <View style={styles.rowLeft}>
+              <MaterialIcons name="fitness-center" size={24} color={c.text} />
+              <Text style={[styles.rowLabel, { color: c.text }]}>Weight</Text>
+            </View>
+            <Text style={[styles.rowValue, { color: c.textTertiary }]}>{profile.weight} {profile.useMetric ? 'kg' : 'lbs'}</Text>
           </View>
           <View style={[styles.row, { borderBottomColor: c.border }]}>
-            <Text style={[styles.rowLabel, { color: c.primary }]}>Height</Text>
-            <Text style={[styles.rowValue, { color: c.tertiary }]}>{profile.height} {profile.useMetric ? 'cm' : 'ft'}</Text>
+            <View style={styles.rowLeft}>
+              <MaterialIcons name="straighten" size={24} color={c.text} />
+              <Text style={[styles.rowLabel, { color: c.text }]}>Height</Text>
+            </View>
+            <Text style={[styles.rowValue, { color: c.textTertiary }]}>{profile.height} {profile.useMetric ? 'cm' : 'in'}</Text>
           </View>
           <View style={[styles.row, { borderBottomColor: c.border }]}>
-            <Text style={[styles.rowLabel, { color: c.primary }]}>Age</Text>
-            <Text style={[styles.rowValue, { color: c.tertiary }]}>{profile.age} years</Text>
+            <View style={styles.rowLeft}>
+              <MaterialIcons name="cake" size={24} color={c.text} />
+              <Text style={[styles.rowLabel, { color: c.text }]}>Age</Text>
+            </View>
+            <Text style={[styles.rowValue, { color: c.textTertiary }]}>{profile.age} years</Text>
           </View>
         </View>
       </View>
 
       <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: c.tertiary }]}>Goals</Text>
+        <Text style={[styles.sectionTitle, { color: c.textTertiary }]}>Goals</Text>
         <View style={[styles.card, { backgroundColor: c.surface }]}>
           <View style={[styles.row, { borderBottomColor: c.border }]}>
-            <Text style={[styles.rowLabel, { color: c.primary }]}>Daily Step Goal</Text>
-            <TextInput style={[styles.input, { color: c.primary }]} value={profile.dailyStepGoal.toString()} onChangeText={handleGoalChange} keyboardType="numeric" selectTextOnFocus />
+            <View style={styles.rowLeft}>
+              <MaterialIcons name="directions-walk" size={24} color={c.text} />
+              <Text style={[styles.rowLabel, { color: c.text }]}>Daily Steps</Text>
+            </View>
+            <TextInput style={[styles.input, { color: c.text }]} value={profile.dailyStepGoal.toString()} onChangeText={handleStepGoalChange} keyboardType="numeric" selectTextOnFocus />
+          </View>
+          <View style={[styles.row, { borderBottomColor: c.border }]}>
+            <View style={styles.rowLeft}>
+              <MaterialIcons name="local-fire-department" size={24} color={c.text} />
+              <Text style={[styles.rowLabel, { color: c.text }]}>Daily Calories</Text>
+            </View>
+            <TextInput style={[styles.input, { color: c.text }]} value={(profile.dailyCalorieGoal || 500).toString()} onChangeText={handleCalorieGoalChange} keyboardType="numeric" selectTextOnFocus />
+          </View>
+          <View style={[styles.row, { borderBottomColor: c.border }]}>
+            <View style={styles.rowLeft}>
+              <MaterialIcons name="monitor-weight" size={24} color={c.text} />
+              <Text style={[styles.rowLabel, { color: c.text }]}>Weight Goal</Text>
+            </View>
+            <TextInput style={[styles.input, { color: c.text }]} value={profile.weightGoal?.toString() || profile.weight.toString()} onChangeText={handleWeightGoalChange} keyboardType="numeric" selectTextOnFocus />
+          </View>
+          <View style={[styles.row, { borderBottomColor: c.border }]}>
+            <View style={styles.rowLeft}>
+              <MaterialIcons name="fitness-center" size={24} color={c.text} />
+              <Text style={[styles.rowLabel, { color: c.text }]}>Weekly Workouts</Text>
+            </View>
+            <TextInput style={[styles.input, { color: c.text }]} value={(profile.weeklyWorkoutGoal || 3).toString()} onChangeText={handleWorkoutGoalChange} keyboardType="numeric" selectTextOnFocus />
           </View>
         </View>
       </View>
 
       <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: c.tertiary }]}>Preferences</Text>
+        <Text style={[styles.sectionTitle, { color: c.textTertiary }]}>Preferences</Text>
         <View style={[styles.card, { backgroundColor: c.surface }]}>
           <View style={[styles.row, { borderBottomColor: c.border }]}>
-            <Text style={[styles.rowLabel, { color: c.primary }]}>Dark Mode</Text>
+            <View style={styles.rowLeft}>
+              <MaterialIcons name="dark-mode" size={24} color={c.text} />
+              <Text style={[styles.rowLabel, { color: c.text }]}>Dark Mode</Text>
+            </View>
             <Switch value={profile.darkMode} onValueChange={handleDarkModeToggle} trackColor={{ false: c.border, true: c.secondary }} thumbColor={c.primary} />
           </View>
           <View style={[styles.row, { borderBottomColor: c.border }]}>
-            <Text style={[styles.rowLabel, { color: c.primary }]}>Use Metric Units</Text>
+            <View style={styles.rowLeft}>
+              <MaterialIcons name="straighten" size={24} color={c.text} />
+              <Text style={[styles.rowLabel, { color: c.text }]}>Use Metric Units</Text>
+            </View>
             <Switch value={profile.useMetric} onValueChange={handleMetricToggle} trackColor={{ false: c.border, true: c.secondary }} thumbColor={c.primary} />
           </View>
         </View>
       </View>
 
       <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: c.tertiary }]}>Data</Text>
+        <Text style={[styles.sectionTitle, { color: c.textTertiary }]}>Data</Text>
+        <View style={[styles.card, { backgroundColor: c.surface, marginBottom: 12 }]}>
+          <View style={[styles.row, { borderBottomColor: c.border }]}>
+            <View style={styles.rowLeft}>
+              <MaterialIcons name="cloud-sync" size={24} color={c.text} />
+              <Text style={[styles.rowLabel, { color: c.text }]}>Google Fit</Text>
+            </View>
+            <Switch value={googleFitEnabled} onValueChange={handleGoogleFitToggle} trackColor={{ false: c.border, true: c.secondary }} thumbColor={c.primary} />
+          </View>
+          <TouchableOpacity style={[styles.row, { borderBottomColor: c.border }]} onPress={handleSyncData} disabled={isSyncing}>
+            <View style={styles.rowLeft}>
+              <MaterialIcons name="sync" size={24} color={c.text} />
+              <Text style={[styles.rowLabel, { color: c.text }]}>Sync Now</Text>
+            </View>
+            {isSyncing ? <ActivityIndicator size="small" color={c.text} /> : <MaterialIcons name="chevron-right" size={24} color={c.textTertiary} />}
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.row, { borderBottomColor: c.border }]} onPress={handleExportData} disabled={isExporting}>
+            <View style={styles.rowLeft}>
+              <MaterialIcons name="download" size={24} color={c.text} />
+              <Text style={[styles.rowLabel, { color: c.text }]}>Export Data</Text>
+            </View>
+            {isExporting ? <ActivityIndicator size="small" color={c.text} /> : <MaterialIcons name="chevron-right" size={24} color={c.textTertiary} />}
+          </TouchableOpacity>
+        </View>
         <TouchableOpacity style={[styles.dangerButton, { backgroundColor: c.surface, borderColor: c.border, borderWidth: 1 }]} onPress={handleResetData}>
-          <Text style={[styles.dangerButtonText, { color: c.primary }]}>Reset All Data</Text>
+          <MaterialIcons name="delete" size={24} color={c.text} />
+          <Text style={[styles.dangerButtonText, { color: c.text }]}>Reset All Data</Text>
         </TouchableOpacity>
       </View>
 
       <View style={styles.footer}>
-        <Text style={[styles.footerText, { color: c.tertiary }]}>Nfit v1.0.0</Text>
-        <Text style={[styles.footerText, { color: c.tertiary }]}>Sensor-driven fitness</Text>
+        <Text style={[styles.footerText, { color: c.textTertiary }]}>Nfit v1.0.0</Text>
+        <Text style={[styles.footerText, { color: c.textTertiary }]}>Sensor-driven fitness</Text>
       </View>
     </View>
   );
@@ -118,11 +301,12 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 14, fontWeight: '600', marginBottom: 8, marginLeft: 4, textTransform: 'uppercase', letterSpacing: 0.5 },
   card: { borderRadius: 16, overflow: 'hidden', elevation: 2 },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1 },
-  rowLabel: { fontSize: 16 },
+  rowLeft: { flexDirection: 'row', alignItems: 'center' },
+  rowLabel: { fontSize: 16, marginLeft: 12 },
   rowValue: { fontSize: 16 },
   input: { fontSize: 16, fontWeight: '600', textAlign: 'right', minWidth: 80 },
-  dangerButton: { borderRadius: 12, padding: 16, alignItems: 'center' },
-  dangerButtonText: { fontSize: 16, fontWeight: '600' },
+  dangerButton: { borderRadius: 12, padding: 16, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' },
+  dangerButtonText: { fontSize: 16, fontWeight: '600', marginLeft: 8 },
   footer: { alignItems: 'center', marginTop: 'auto', paddingVertical: 24 },
   footerText: { fontSize: 12, marginTop: 4 },
 });

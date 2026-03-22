@@ -1,25 +1,11 @@
 import { Tabs } from 'expo-router';
-import { Text, View } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 import { useUserStore } from '../../store/userStore';
-
-function Icon({ name, color }: { name: string; color: string }) {
-  const icons: Record<string, string> = {
-    home: '\u2302',
-    chart: '\u2593',
-    settings: '\u2699',
-  };
-  return <Text style={{ fontSize: 22, color }}>{icons[name] || '\u2022'}</Text>;
-}
+import { getColors } from '../../utils/theme';
 
 export default function TabsLayout() {
   const darkMode = useUserStore((state) => state.profile?.darkMode ?? false);
-  const c = darkMode ? {
-    bg: '#000000', surface: '#1A1A1A', border: '#333333',
-    primary: '#FFFFFF', secondary: '#B0B0B0', tertiary: '#707070'
-  } : {
-    bg: '#FFFFFF', surface: '#F5F5F5', border: '#E0E0E0',
-    primary: '#000000', secondary: '#666666', tertiary: '#999999'
-  };
+  const c = getColors(darkMode);
 
   return (
     <Tabs
@@ -33,29 +19,36 @@ export default function TabsLayout() {
           paddingBottom: 8,
           paddingTop: 8,
         },
-        tabBarActiveTintColor: c.primary,
-        tabBarInactiveTintColor: c.tertiary,
+        tabBarActiveTintColor: c.text,
+        tabBarInactiveTintColor: c.textTertiary,
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
           title: 'Home',
-          tabBarIcon: ({ color }) => <Icon name="home" color={color} />,
+          tabBarIcon: ({ color }) => <MaterialIcons name="home" size={24} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="workouts"
+        options={{
+          title: 'Workouts',
+          tabBarIcon: ({ color }) => <MaterialIcons name="fitness-center" size={24} color={color} />,
         }}
       />
       <Tabs.Screen
         name="history"
         options={{
           title: 'History',
-          tabBarIcon: ({ color }) => <Icon name="chart" color={color} />,
+          tabBarIcon: ({ color }) => <MaterialIcons name="bar-chart" size={24} color={color} />,
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
           title: 'Settings',
-          tabBarIcon: ({ color }) => <Icon name="settings" color={color} />,
+          tabBarIcon: ({ color }) => <MaterialIcons name="settings" size={24} color={color} />,
         }}
       />
     </Tabs>
