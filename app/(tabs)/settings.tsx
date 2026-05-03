@@ -14,6 +14,8 @@ export default function SettingsScreen() {
   const workouts = useUserStore((state) => state.workouts);
   const updateProfile = useUserStore((state) => state.updateProfile);
   const setHasCompletedOnboarding = useUserStore((state) => state.setHasCompletedOnboarding);
+  const calculateCalories = useFitnessStore((state) => state.calculateCalories);
+  const calculateDistance = useFitnessStore((state) => state.calculateDistance);
   const stepHistory = useFitnessStore((state) => state.stepHistory);
   
   const [isSyncing, setIsSyncing] = useState(false);

@@ -24,6 +24,7 @@ export default function HistoryScreen() {
   const c = getColors(darkMode);
 
   const goal = profile?.dailyStepGoal || 10000;
+  const { calculateCalories } = useFitnessStore();
   const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -36,6 +37,7 @@ export default function HistoryScreen() {
     const totalActiveMinutes = weekData.reduce((sum, d) => sum + d.activeMinutes, 0);
     const avgSteps = Math.round(totalSteps / 7);
     const daysGoalMet = weekData.filter((d) => d.steps >= goal).length;
+    const calories = calculateCalories(totalSteps, profile?.weight || 0, profile?.useMetric || false);
 
     return (
       <>
@@ -67,6 +69,10 @@ export default function HistoryScreen() {
           <View style={[styles.summaryRow, { borderBottomColor: c.border }]}>
             <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>Total Steps</Text>
             <Text style={[styles.summaryValue, { color: c.text }]}>{totalSteps.toLocaleString()}</Text>
+          </View>
+          <View style={[styles.summaryRow, { borderBottomColor: c.border }]}>
+            <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>Total Calories</Text>
+            <Text style={[styles.summaryValue, { color: c.text }]}>{calories.toLocaleString()} kcal</Text>
           </View>
           <View style={[styles.summaryRow, { borderBottomColor: c.border }]}>
             <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>Total Floors</Text>

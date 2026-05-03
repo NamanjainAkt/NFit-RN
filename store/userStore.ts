@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../utils/storage';
-import { format } from 'date-fns';
+import { format, subDays, isSameDay, parseISO } from 'date-fns';
 
 export interface UserProfile {
   name: string;
@@ -62,16 +62,24 @@ export const useUserStore = create<UserState>()(
       setHasCompletedOnboarding: (value) => set({ hasCompletedOnboarding: value }),
       updateStepStreak: (today) => {
         const { lastActiveDate, stepStreak } = get();
+        const todayDate = parseISO(today);
+        
         if (!lastActiveDate) {
           set({ stepStreak: 1, lastActiveDate: today });
           return;
         }
-        const yesterday = new Date();
-        yesterday.setDate(yesterday.getDate() - 1);
-        const yesterdayStr = yesterday.toISOString().split('T')[0];
-        if (lastActiveDate === yesterdayStr) {
+
+        const lastDate = parseISO(lastActiveDate);
+        const yesterday = subDays(todayDate, 1);
+
+        if (isSameDay(lastDate, todayDate)) {
+          // Already active today, do nothing
+          return;
+        }
+
+        if (isSameDay(lastDate, yesterday)) {
           set({ stepStreak: stepStreak + 1, lastActiveDate: today });
-        } else if (lastActiveDate !== today) {
+        } else {
           set({ stepStreak: 1, lastActiveDate: today });
         }
       },

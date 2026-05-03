@@ -19,21 +19,35 @@ export default function OnboardingScreen() {
   const c = getColors(darkMode);
 
   const handleComplete = () => {
-    if (!name || !weight || !height || !age) return;
+    const w = parseFloat(weight);
+    const h = parseFloat(height);
+    const a = parseInt(age, 10);
+    const g = parseInt(dailyStepGoal, 10);
+
+    if (!name || isNaN(w) || w <= 0 || isNaN(h) || h <= 0 || isNaN(a) || a <= 0) {
+      // Basic validation check
+      return;
+    }
+
     setProfile({ 
       name, 
-      weight: parseFloat(weight), 
-      height: parseFloat(height), 
-      age: parseInt(age, 10), 
-      dailyStepGoal: parseInt(dailyStepGoal, 10) || 10000, 
+      weight: w, 
+      height: h, 
+      age: a, 
+      dailyStepGoal: g || 10000, 
       dailyCalorieGoal: 500,
-      weightGoal: parseFloat(weight),
+      weightGoal: w,
       weeklyWorkoutGoal: 3,
       useMetric, 
       darkMode 
     });
     router.replace('/(tabs)');
   };
+
+  const isInvalid = !name || !weight || !height || !age || 
+                    isNaN(parseFloat(weight)) || parseFloat(weight) <= 0 ||
+                    isNaN(parseFloat(height)) || parseFloat(height) <= 0 ||
+                    isNaN(parseInt(age, 10)) || parseInt(age, 10) <= 0;
 
   const weightUnit = useMetric ? 'kg' : 'lbs';
   const heightUnit = useMetric ? 'cm' : 'in';
@@ -76,7 +90,7 @@ export default function OnboardingScreen() {
             </TouchableOpacity>
           </View>
         </View>
-        <TouchableOpacity style={[styles.button, { backgroundColor: c.text }, (!name || !weight || !height || !age) && { backgroundColor: c.textTertiary }]} onPress={handleComplete} disabled={!name || !weight || !height || !age}>
+        <TouchableOpacity style={[styles.button, { backgroundColor: c.text }, isInvalid && { backgroundColor: c.textTertiary }]} onPress={handleComplete} disabled={isInvalid}>
           <Text style={[styles.buttonText, { color: c.background }]}>Get Started</Text>
         </TouchableOpacity>
       </ScrollView>

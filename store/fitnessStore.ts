@@ -19,13 +19,14 @@ interface FitnessState {
   stepHistory: DailySteps[];
   currentStreak: number;
   setTodaySteps: (steps: number) => void;
+  syncTodayWithHistory: () => void;
   setTodayFloors: (floors: number) => void;
   setTodayActiveMinutes: (minutes: number) => void;
   recordDay: (data: Omit<DailySteps, 'date'>) => void;
   getWeekHistory: () => DailySteps[];
   getMonthHistory: () => DailySteps[];
   getYearHistory: () => DailySteps[];
-  calculateCalories: (steps: number, weight: number) => number;
+  calculateCalories: (steps: number, weight: number, useMetric: boolean) => number;
   calculateDistance: (steps: number, height: number, useMetric: boolean) => number;
 }
 
@@ -37,9 +38,31 @@ export const useFitnessStore = create<FitnessState>()(
       todayActiveMinutes: 0,
       stepHistory: [],
       currentStreak: 0,
-      setTodaySteps: (steps) => set({ todaySteps: steps }),
-      setTodayFloors: (floors) => set({ todayFloors: floors }),
-      setTodayActiveMinutes: (minutes) => set({ todayActiveMinutes: minutes }),
+      setTodaySteps: (steps) => {
+        set({ todaySteps: steps });
+        get().syncTodayWithHistory();
+      },
+      syncTodayWithHistory: () => {
+        const { todaySteps, todayFloors, todayActiveMinutes, todayActiveMinutes: active, calculateCalories, calculateDistance, recordDay } = get();
+        // Since we don't have access to profile here easily without passing it, 
+        // we'll rely on recordDay to be called with the latest stats.
+        // Actually, recordDay already does the syncing logic.
+        recordDay({
+          steps: todaySteps,
+          floors: todayFloors,
+          activeMinutes: todayActiveMinutes,
+          calories: 0, // Will be calculated on display or we need profile here
+          distance: 0, // Will be calculated on display
+        });
+      },
+      setTodayFloors: (floors) => {
+        set({ todayFloors: floors });
+        get().syncTodayWithHistory();
+      },
+      setTodayActiveMinutes: (minutes) => {
+        set({ todayActiveMinutes: minutes });
+        get().syncTodayWithHistory();
+      },
       recordDay: (data) => {
         const today = format(new Date(), 'yyyy-MM-dd');
         const { stepHistory } = get();
@@ -109,8 +132,9 @@ export const useFitnessStore = create<FitnessState>()(
         }
         return yearData;
       },
-      calculateCalories: (steps, weight) => {
-        return Math.round(steps * weight * 0.0005);
+      calculateCalories: (steps, weight, useMetric) => {
+        const weightKg = useMetric ? weight : weight * 0.453592;
+        return Math.round(steps * weightKg * 0.0005);
       },
       calculateDistance: (steps, height, useMetric) => {
         const strideMeters = height * 0.415;

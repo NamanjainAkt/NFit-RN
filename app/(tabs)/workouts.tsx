@@ -42,7 +42,7 @@ export default function WorkoutsScreen() {
       return;
     }
 
-    const calories = Math.round(durationNum * selectedType.caloriesPerMin);
+    const calories = Math.round(durationNum * selectedType.caloriesPerMin * (profile?.weight ? (profile.useMetric ? profile.weight : profile.weight * 0.453592) / 70 : 1));
     addWorkout({
       type: selectedType.name,
       duration: durationNum,
@@ -136,7 +136,7 @@ export default function WorkoutsScreen() {
         <View style={[styles.caloriesPreview, { backgroundColor: c.surface }]}>
           <Text style={[styles.previewLabel, { color: c.textTertiary }]}>Estimated Calories</Text>
           <Text style={[styles.previewValue, { color: c.text }]}>
-            {duration ? Math.round(parseInt(duration, 10) * selectedType.caloriesPerMin) : 0} cal
+            {duration ? Math.round(parseInt(duration, 10) * selectedType.caloriesPerMin * (profile?.weight ? (profile.useMetric ? profile.weight : profile.weight * 0.453592) / 70 : 1)) : 0} cal
           </Text>
         </View>
 
