@@ -18,14 +18,18 @@ export default function OnboardingScreen() {
 
   const c = getColors(darkMode);
 
+  const validateField = (value: string, max: number, min: number = 1): boolean => {
+    const num = parseFloat(value);
+    return !isNaN(num) && num >= min && num <= max;
+  };
+
   const handleComplete = () => {
     const w = parseFloat(weight);
     const h = parseFloat(height);
     const a = parseInt(age, 10);
     const g = parseInt(dailyStepGoal, 10);
 
-    if (!name || isNaN(w) || w <= 0 || isNaN(h) || h <= 0 || isNaN(a) || a <= 0) {
-      // Basic validation check
+    if (!name || !validateField(weight, 500) || !validateField(height, 300) || !validateField(age, 150)) {
       return;
     }
 
@@ -45,9 +49,9 @@ export default function OnboardingScreen() {
   };
 
   const isInvalid = !name || !weight || !height || !age || 
-                    isNaN(parseFloat(weight)) || parseFloat(weight) <= 0 ||
-                    isNaN(parseFloat(height)) || parseFloat(height) <= 0 ||
-                    isNaN(parseInt(age, 10)) || parseInt(age, 10) <= 0;
+                    !validateField(weight, 500) ||
+                    !validateField(height, 300) ||
+                    !validateField(age, 150);
 
   const weightUnit = useMetric ? 'kg' : 'lbs';
   const heightUnit = useMetric ? 'cm' : 'in';

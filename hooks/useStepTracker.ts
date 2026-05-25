@@ -10,39 +10,80 @@ export function useStepTracker() {
   const profile = useUserStore((state) => state.profile);
   const stepStreak = useUserStore((state) => state.stepStreak);
   const updateStepStreak = useUserStore((state) => state.updateStepStreak);
-  
-  const { 
-    todaySteps, 
-    setTodaySteps, 
-    setTodayFloors, 
-    setTodayActiveMinutes 
+
+  const {
+    todaySteps,
+    setTodaySteps,
+    setTodayFloors,
+    setTodayActiveMinutes
   } = useFitnessStore();
-  
+
   const [isSimulated, setIsSimulated] = useState(false);
   const [goalNotified, setGoalNotified] = useState(false);
   const progressAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const profileRef = useRef(profile);
+  profileRef.current = profile;
 
   useEffect(() => {
-    checkPedometer();
+    let subscription: { remove: () => void } | null = null;
+    let mounted = true;
+
+    const setup = async () => {
+      try {
+        const available = await Pedometer.isAvailableAsync();
+        if (!available) {
+          if (mounted) simulateSteps();
+          return;
+        }
+
+        const result = await Pedometer.requestPermissionsAsync();
+        if (result.granted) {
+          subscription = Pedometer.watchStepCount((data) => {
+            setTodaySteps(data.steps);
+            setTodayFloors(Math.floor(data.steps / 200));
+            setTodayActiveMinutes(Math.floor(data.steps / 100));
+
+            const currentProfile = profileRef.current;
+            if (currentProfile) {
+              const goal = currentProfile.dailyStepGoal || 10000;
+              if (data.steps >= goal) {
+                updateStepStreak(format(new Date(), 'yyyy-MM-dd'));
+              }
+            }
+          });
+        } else {
+          if (mounted) simulateSteps();
+        }
+      } catch {
+        if (mounted) simulateSteps();
+      }
+    };
+
+    setup();
+
+    return () => {
+      mounted = false;
+      if (subscription) subscription.remove();
+    };
   }, []);
 
   useEffect(() => {
     if (profile) {
       const goal = profile.dailyStepGoal || 10000;
       const progress = Math.min(todaySteps / goal, 1);
-      
-      Animated.spring(progressAnim, { 
-        toValue: progress, 
-        useNativeDriver: false, 
-        tension: 50, 
-        friction: 10 
+
+      Animated.spring(progressAnim, {
+        toValue: progress,
+        useNativeDriver: false,
+        tension: 50,
+        friction: 10
       }).start();
 
       if (progress >= 1 && !goalNotified) {
         setGoalNotified(true);
         sendGoalReachedNotification(todaySteps);
-        
+
         if (stepStreak > 0 && stepStreak % 7 === 0) {
           sendStreakNotification(stepStreak);
         }
@@ -63,37 +104,6 @@ export function useStepTracker() {
     setTodaySteps(simulatedSteps);
     setTodayFloors(Math.floor(simulatedSteps / 200));
     setTodayActiveMinutes(Math.floor(simulatedSteps / 100));
-  };
-
-  const checkPedometer = async () => {
-    try {
-      const available = await Pedometer.isAvailableAsync();
-      if (!available) { 
-        simulateSteps();
-        return; 
-      }
-      
-      const result = await Pedometer.requestPermissionsAsync();
-      if (result.granted) {
-        const sub = Pedometer.watchStepCount((data) => {
-          setTodaySteps(data.steps);
-          setTodayFloors(Math.floor(data.steps / 200));
-          setTodayActiveMinutes(Math.floor(data.steps / 100));
-          
-          if (profile) {
-            const goal = profile.dailyStepGoal || 10000;
-            if (data.steps >= goal) {
-              updateStepStreak(format(new Date(), 'yyyy-MM-dd'));
-            }
-          }
-        });
-        return () => sub && sub.remove();
-      } else { 
-        simulateSteps();
-      }
-    } catch (e) {
-      simulateSteps();
-    }
   };
 
   return {

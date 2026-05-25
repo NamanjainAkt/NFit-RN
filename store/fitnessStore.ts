@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { format } from 'date-fns';
 import { zustandStorage } from '../utils/storage';
+import { calculateCalories, calculateDistance } from '../utils/calculations';
+import { useUserStore } from './userStore';
 
 export interface DailySteps {
   date: string;
@@ -26,8 +28,6 @@ interface FitnessState {
   getWeekHistory: () => DailySteps[];
   getMonthHistory: () => DailySteps[];
   getYearHistory: () => DailySteps[];
-  calculateCalories: (steps: number, weight: number, useMetric: boolean) => number;
-  calculateDistance: (steps: number, height: number, useMetric: boolean) => number;
 }
 
 export const useFitnessStore = create<FitnessState>()(
@@ -43,17 +43,11 @@ export const useFitnessStore = create<FitnessState>()(
         get().syncTodayWithHistory();
       },
       syncTodayWithHistory: () => {
-        const { todaySteps, todayFloors, todayActiveMinutes, todayActiveMinutes: active, calculateCalories, calculateDistance, recordDay } = get();
-        // Since we don't have access to profile here easily without passing it, 
-        // we'll rely on recordDay to be called with the latest stats.
-        // Actually, recordDay already does the syncing logic.
-        recordDay({
-          steps: todaySteps,
-          floors: todayFloors,
-          activeMinutes: todayActiveMinutes,
-          calories: 0, // Will be calculated on display or we need profile here
-          distance: 0, // Will be calculated on display
-        });
+        const { todaySteps, todayFloors, todayActiveMinutes, recordDay } = get();
+        const profile = useUserStore.getState().profile;
+        const calories = profile ? calculateCalories(todaySteps, profile.weight, profile.useMetric) : 0;
+        const distance = profile ? calculateDistance(todaySteps, profile.height, profile.useMetric) : 0;
+        recordDay({ steps: todaySteps, floors: todayFloors, activeMinutes: todayActiveMinutes, calories, distance });
       },
       setTodayFloors: (floors) => {
         set({ todayFloors: floors });
@@ -104,6 +98,7 @@ export const useFitnessStore = create<FitnessState>()(
       getYearHistory: () => {
         const { stepHistory } = get();
         const today = new Date();
+        const profile = useUserStore.getState().profile;
         const yearData: DailySteps[] = [];
         for (let month = 0; month <= today.getMonth(); month++) {
           const daysInMonth = new Date(today.getFullYear(), month + 1, 0).getDate();
@@ -120,26 +115,16 @@ export const useFitnessStore = create<FitnessState>()(
               monthActiveMinutes += existing.activeMinutes;
             }
           }
-          const monthName = format(new Date(today.getFullYear(), month, 1), 'MMM');
           yearData.push({
             date: `${today.getFullYear()}-${String(month + 1).padStart(2, '0')}-01`,
             steps: monthSteps,
             floors: monthFloors,
             activeMinutes: monthActiveMinutes,
-            calories: 0,
-            distance: 0,
+            calories: profile ? calculateCalories(monthSteps, profile.weight, profile.useMetric) : 0,
+            distance: profile ? calculateDistance(monthSteps, profile.height, profile.useMetric) : 0,
           });
         }
         return yearData;
-      },
-      calculateCalories: (steps, weight, useMetric) => {
-        const weightKg = useMetric ? weight : weight * 0.453592;
-        return Math.round(steps * weightKg * 0.0005);
-      },
-      calculateDistance: (steps, height, useMetric) => {
-        const strideMeters = height * 0.415;
-        const distanceMeters = steps * strideMeters;
-        return useMetric ? distanceMeters / 1000 : distanceMeters / 1609.34;
       },
     }),
     {

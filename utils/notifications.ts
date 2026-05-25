@@ -48,58 +48,60 @@ export async function requestNotificationPermissions(): Promise<boolean> {
   return true;
 }
 
-export async function sendGoalReminderNotification(currentSteps: number, goal: number): Promise<void> {
-  const remaining = goal - currentSteps;
-  if (remaining <= 2000 && remaining > 0) {
+export async function sendGoalReachedNotification(steps: number): Promise<void> {
+  try {
     await Notifications.scheduleNotificationAsync({
       content: {
-        title: 'Almost there!',
-        body: `You're just ${remaining.toLocaleString()} steps away from reaching your goal!`,
-        data: { type: 'goal_reminder' },
+        title: 'Goal Achieved!',
+        body: `Congratulations! You've reached ${steps.toLocaleString()} steps today!`,
+        data: { type: 'goal_reached' },
       },
       trigger: null,
     });
+  } catch {
+    // Silently fail - notification is non-critical
   }
 }
 
-export async function sendGoalReachedNotification(steps: number): Promise<void> {
-  await Notifications.scheduleNotificationAsync({
-    content: {
-      title: 'Goal Achieved! 🎉',
-      body: `Congratulations! You've reached ${steps.toLocaleString()} steps today!`,
-      data: { type: 'goal_reached' },
-    },
-    trigger: null,
-  });
-}
-
 export async function sendStreakNotification(streak: number): Promise<void> {
-  await Notifications.scheduleNotificationAsync({
-    content: {
-      title: `${streak} Day Streak! 🔥`,
-      body: `Amazing! You've maintained your streak for ${streak} days. Keep it up!`,
-      data: { type: 'streak' },
-    },
-    trigger: null,
-  });
+  try {
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: `${streak} Day Streak!`,
+        body: `Amazing! You've maintained your streak for ${streak} days. Keep it up!`,
+        data: { type: 'streak' },
+      },
+      trigger: null,
+    });
+  } catch {
+    // Silently fail - notification is non-critical
+  }
 }
 
-export async function scheduleDailyReminder(hour: number = 20, minute: number = 0): Promise<string> {
-  const id = await Notifications.scheduleNotificationAsync({
-    content: {
-      title: 'Time to move!',
-      body: "Don't forget to get your steps in today.",
-      data: { type: 'daily_reminder' },
-    },
-    trigger: {
-      type: Notifications.SchedulableTriggerInputTypes.DAILY,
-      hour,
-      minute,
-    },
-  });
-  return id;
+export async function scheduleDailyReminder(hour: number = 20, minute: number = 0): Promise<string | null> {
+  try {
+    const id = await Notifications.scheduleNotificationAsync({
+      content: {
+        title: 'Time to move!',
+        body: "Don't forget to get your steps in today.",
+        data: { type: 'daily_reminder' },
+      },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.DAILY,
+        hour,
+        minute,
+      },
+    });
+    return id;
+  } catch {
+    return null;
+  }
 }
 
 export async function cancelAllNotifications(): Promise<void> {
-  await Notifications.cancelAllScheduledNotificationsAsync();
+  try {
+    await Notifications.cancelAllScheduledNotificationsAsync();
+  } catch {
+    // Silently fail
+  }
 }

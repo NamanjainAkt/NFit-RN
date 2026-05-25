@@ -1,16 +1,15 @@
 import { useUserStore } from '../store/userStore';
 import { useFitnessStore } from '../store/fitnessStore';
+import { calculateCalories, calculateDistance } from '../utils/calculations';
 
 export function useFitnessStats() {
   const profile = useUserStore((state) => state.profile);
   const stepStreak = useUserStore((state) => state.stepStreak);
-  
-  const { 
-    todaySteps, 
-    todayFloors, 
-    todayActiveMinutes, 
-    calculateCalories, 
-    calculateDistance 
+
+  const {
+    todaySteps,
+    todayFloors,
+    todayActiveMinutes
   } = useFitnessStore();
 
   if (!profile) return null;

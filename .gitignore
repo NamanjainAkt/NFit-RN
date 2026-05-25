@@ -26,6 +26,10 @@ npm-debug.*
 yarn-debug.*
 yarn-error.*
 
+# Build artifacts
+.expo-export/
+tmp-export-test/
+
 # macOS
 .DS_Store
 *.pem

@@ -1,10 +1,10 @@
-import { View, Text, StyleSheet, TouchableOpacity, Switch, TextInput, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, TextInput, Alert, ActivityIndicator } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useUserStore } from '../../store/userStore';
 import { useFitnessStore } from '../../store/fitnessStore';
 import { useRouter } from 'expo-router';
 import { getColors } from '../../utils/theme';
-import { isGoogleFitAvailable, requestGoogleFitPermissions, syncGoogleFitData } from '../../utils/googleFit';
 import { shareData, ExportData } from '../../utils/export';
 import { useState } from 'react';
 
@@ -14,18 +14,34 @@ export default function SettingsScreen() {
   const workouts = useUserStore((state) => state.workouts);
   const updateProfile = useUserStore((state) => state.updateProfile);
   const setHasCompletedOnboarding = useUserStore((state) => state.setHasCompletedOnboarding);
-  const calculateCalories = useFitnessStore((state) => state.calculateCalories);
-  const calculateDistance = useFitnessStore((state) => state.calculateDistance);
   const stepHistory = useFitnessStore((state) => state.stepHistory);
   
-  const [isSyncing, setIsSyncing] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
-  const [googleFitEnabled, setGoogleFitEnabled] = useState(false);
 
   if (!profile) return null;
 
+  const insets = useSafeAreaInsets();
   const darkMode = profile.darkMode ?? false;
   const c = getColors(darkMode);
+
+  const handleNameChange = (text: string) => {
+    if (text.trim()) updateProfile({ name: text });
+  };
+
+  const handleWeightChange = (text: string) => {
+    const w = parseFloat(text);
+    if (!isNaN(w) && w > 0) updateProfile({ weight: w });
+  };
+
+  const handleHeightChange = (text: string) => {
+    const h = parseFloat(text);
+    if (!isNaN(h) && h > 0) updateProfile({ height: h });
+  };
+
+  const handleAgeChange = (text: string) => {
+    const a = parseInt(text, 10);
+    if (!isNaN(a) && a > 0) updateProfile({ age: a });
+  };
 
   const handleDarkModeToggle = (value: boolean) => {
     updateProfile({ darkMode: value });
@@ -68,38 +84,6 @@ export default function SettingsScreen() {
       { text: 'Cancel', style: 'cancel' },
       { text: 'Reset', style: 'destructive', onPress: () => { setHasCompletedOnboarding(false); router.replace('/onboarding'); } },
     ]);
-  };
-
-  const handleGoogleFitToggle = async (value: boolean) => {
-    if (value) {
-      const available = await isGoogleFitAvailable();
-      if (!available) {
-        Alert.alert('Not Available', 'Google Fit is not available on this device.');
-        return;
-      }
-      const granted = await requestGoogleFitPermissions();
-      if (!granted) {
-        Alert.alert('Permission Denied', 'Please grant Google Fit permissions in settings.');
-        return;
-      }
-    }
-    setGoogleFitEnabled(value);
-  };
-
-  const handleSyncData = async () => {
-    setIsSyncing(true);
-    try {
-      const data = await syncGoogleFitData();
-      if (data) {
-        Alert.alert('Sync Complete', `Synced ${data.steps} steps from Google Fit.`);
-      } else {
-        Alert.alert('Not Available', 'Google Fit sync is not available. Use manual entry in demo mode.');
-      }
-    } catch (error) {
-      Alert.alert('Sync Failed', 'Unable to sync with Google Fit.');
-    } finally {
-      setIsSyncing(false);
-    }
   };
 
   const handleExportData = () => {
@@ -162,6 +146,8 @@ export default function SettingsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: c.background }]}>
+      <View style={{ height: insets.top }} />
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}>
       <View style={styles.header}>
         <Text style={[styles.title, { color: c.text }]}>Settings</Text>
         <Text style={[styles.subtitle, { color: c.textTertiary }]}>Customize your experience</Text>
@@ -170,34 +156,34 @@ export default function SettingsScreen() {
       <View style={styles.section}>
         <Text style={[styles.sectionTitle, { color: c.textTertiary }]}>Profile</Text>
         <View style={[styles.card, { backgroundColor: c.surface }]}>
-          <View style={[styles.row, { borderBottomColor: c.border }]}>
-            <View style={styles.rowLeft}>
-              <MaterialIcons name="person" size={24} color={c.text} />
-              <Text style={[styles.rowLabel, { color: c.text }]}>Name</Text>
+            <View style={[styles.row, { borderBottomColor: c.border }]}>
+              <View style={styles.rowLeft}>
+                <MaterialIcons name="person" size={24} color={c.text} />
+                <Text style={[styles.rowLabel, { color: c.text }]}>Name</Text>
+              </View>
+              <TextInput style={[styles.input, { color: c.text }]} value={profile.name} onChangeText={handleNameChange} selectTextOnFocus />
             </View>
-            <Text style={[styles.rowValue, { color: c.textTertiary }]}>{profile.name}</Text>
-          </View>
-          <View style={[styles.row, { borderBottomColor: c.border }]}>
-            <View style={styles.rowLeft}>
-              <MaterialIcons name="fitness-center" size={24} color={c.text} />
-              <Text style={[styles.rowLabel, { color: c.text }]}>Weight</Text>
+            <View style={[styles.row, { borderBottomColor: c.border }]}>
+              <View style={styles.rowLeft}>
+                <MaterialIcons name="fitness-center" size={24} color={c.text} />
+                <Text style={[styles.rowLabel, { color: c.text }]}>Weight</Text>
+              </View>
+              <TextInput style={[styles.input, { color: c.text }]} value={profile.weight.toString()} onChangeText={handleWeightChange} keyboardType="numeric" selectTextOnFocus />
             </View>
-            <Text style={[styles.rowValue, { color: c.textTertiary }]}>{profile.weight} {profile.useMetric ? 'kg' : 'lbs'}</Text>
-          </View>
-          <View style={[styles.row, { borderBottomColor: c.border }]}>
-            <View style={styles.rowLeft}>
-              <MaterialIcons name="straighten" size={24} color={c.text} />
-              <Text style={[styles.rowLabel, { color: c.text }]}>Height</Text>
+            <View style={[styles.row, { borderBottomColor: c.border }]}>
+              <View style={styles.rowLeft}>
+                <MaterialIcons name="straighten" size={24} color={c.text} />
+                <Text style={[styles.rowLabel, { color: c.text }]}>Height</Text>
+              </View>
+              <TextInput style={[styles.input, { color: c.text }]} value={profile.height.toString()} onChangeText={handleHeightChange} keyboardType="numeric" selectTextOnFocus />
             </View>
-            <Text style={[styles.rowValue, { color: c.textTertiary }]}>{profile.height} {profile.useMetric ? 'cm' : 'in'}</Text>
-          </View>
-          <View style={[styles.row, { borderBottomColor: c.border }]}>
-            <View style={styles.rowLeft}>
-              <MaterialIcons name="cake" size={24} color={c.text} />
-              <Text style={[styles.rowLabel, { color: c.text }]}>Age</Text>
+            <View style={[styles.row, { borderBottomColor: c.border }]}>
+              <View style={styles.rowLeft}>
+                <MaterialIcons name="cake" size={24} color={c.text} />
+                <Text style={[styles.rowLabel, { color: c.text }]}>Age</Text>
+              </View>
+              <TextInput style={[styles.input, { color: c.text }]} value={profile.age.toString()} onChangeText={handleAgeChange} keyboardType="numeric" selectTextOnFocus />
             </View>
-            <Text style={[styles.rowValue, { color: c.textTertiary }]}>{profile.age} years</Text>
-          </View>
         </View>
       </View>
 
@@ -258,20 +244,6 @@ export default function SettingsScreen() {
       <View style={styles.section}>
         <Text style={[styles.sectionTitle, { color: c.textTertiary }]}>Data</Text>
         <View style={[styles.card, { backgroundColor: c.surface, marginBottom: 12 }]}>
-          <View style={[styles.row, { borderBottomColor: c.border }]}>
-            <View style={styles.rowLeft}>
-              <MaterialIcons name="cloud-sync" size={24} color={c.text} />
-              <Text style={[styles.rowLabel, { color: c.text }]}>Google Fit</Text>
-            </View>
-            <Switch value={googleFitEnabled} onValueChange={handleGoogleFitToggle} trackColor={{ false: c.border, true: c.secondary }} thumbColor={c.primary} />
-          </View>
-          <TouchableOpacity style={[styles.row, { borderBottomColor: c.border }]} onPress={handleSyncData} disabled={isSyncing}>
-            <View style={styles.rowLeft}>
-              <MaterialIcons name="sync" size={24} color={c.text} />
-              <Text style={[styles.rowLabel, { color: c.text }]}>Sync Now</Text>
-            </View>
-            {isSyncing ? <ActivityIndicator size="small" color={c.text} /> : <MaterialIcons name="chevron-right" size={24} color={c.textTertiary} />}
-          </TouchableOpacity>
           <TouchableOpacity style={[styles.row, { borderBottomColor: c.border }]} onPress={handleExportData} disabled={isExporting}>
             <View style={styles.rowLeft}>
               <MaterialIcons name="download" size={24} color={c.text} />
@@ -290,13 +262,14 @@ export default function SettingsScreen() {
         <Text style={[styles.footerText, { color: c.textTertiary }]}>Nfit v1.0.0</Text>
         <Text style={[styles.footerText, { color: c.textTertiary }]}>Sensor-driven fitness</Text>
       </View>
+    </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20 },
-  header: { marginTop: 50, marginBottom: 24 },
+  container: { flex: 1 },
+  header: { marginBottom: 24 },
   title: { fontSize: 28, fontWeight: 'bold' },
   subtitle: { fontSize: 16, marginTop: 4 },
   section: { marginBottom: 24 },
@@ -309,6 +282,6 @@ const styles = StyleSheet.create({
   input: { fontSize: 16, fontWeight: '600', textAlign: 'right', minWidth: 80 },
   dangerButton: { borderRadius: 12, padding: 16, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' },
   dangerButtonText: { fontSize: 16, fontWeight: '600', marginLeft: 8 },
-  footer: { alignItems: 'center', marginTop: 'auto', paddingVertical: 24 },
+  footer: { alignItems: 'center', paddingVertical: 24 },
   footerText: { fontSize: 12, marginTop: 4 },
 });

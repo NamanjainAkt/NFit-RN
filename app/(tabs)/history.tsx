@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { View, Text, StyleSheet, Dimensions, TouchableOpacity, ScrollView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useUserStore } from '../../store/userStore';
 import { useFitnessStore, DailySteps } from '../../store/fitnessStore';
+import { calculateCalories } from '../../utils/calculations';
 import { getColors } from '../../utils/theme';
-import { format, getDay, startOfMonth, endOfMonth, eachDayOfInterval, getWeek } from 'date-fns';
+import { format, getDay, startOfMonth, endOfMonth, subDays, startOfYear } from 'date-fns';
 
 const { width } = Dimensions.get('window');
 const barWidth = (width - 80) / 7;
@@ -13,6 +15,8 @@ type ViewMode = 'week' | 'month' | 'year';
 
 export default function HistoryScreen() {
   const profile = useUserStore((state) => state.profile);
+  const workouts = useUserStore((state) => state.workouts);
+  const stepHistory = useFitnessStore((state) => state.stepHistory);
   const getWeekHistory = useFitnessStore((state) => state.getWeekHistory);
   const getMonthHistory = useFitnessStore((state) => state.getMonthHistory);
   const getYearHistory = useFitnessStore((state) => state.getYearHistory);
@@ -20,24 +24,46 @@ export default function HistoryScreen() {
 
   const [viewMode, setViewMode] = useState<ViewMode>('week');
 
+  const insets = useSafeAreaInsets();
   const darkMode = profile?.darkMode ?? false;
   const c = getColors(darkMode);
 
   const goal = profile?.dailyStepGoal || 10000;
-  const { calculateCalories } = useFitnessStore();
   const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const distanceUnit = profile?.useMetric ? 'km' : 'mi';
+  const today = format(new Date(), 'yyyy-MM-dd');
 
   const renderWeekView = () => {
     const weekData = getWeekHistory();
     const maxSteps = Math.max(...weekData.map((d) => d.steps), 1);
-
     const totalSteps = weekData.reduce((sum, d) => sum + d.steps, 0);
     const totalFloors = weekData.reduce((sum, d) => sum + d.floors, 0);
     const totalActiveMinutes = weekData.reduce((sum, d) => sum + d.activeMinutes, 0);
+    const totalDistance = weekData.reduce((sum, d) => sum + d.distance, 0);
     const avgSteps = Math.round(totalSteps / 7);
     const daysGoalMet = weekData.filter((d) => d.steps >= goal).length;
-    const calories = calculateCalories(totalSteps, profile?.weight || 0, profile?.useMetric || false);
+    const calories = profile ? calculateCalories(totalSteps, profile.weight, profile.useMetric) : 0;
+    const goalPercent = Math.round((avgSteps / goal) * 100);
+    const bestDay = weekData.reduce((best, d) => d.steps > best.steps ? d : best, weekData[0]);
+    const bestDayName = days[getDay(new Date(bestDay.date))];
+
+    const weekStart = format(subDays(new Date(), 6), 'yyyy-MM-dd');
+    const weekWorkouts = workouts.filter((w) => w.date >= weekStart && w.date <= today);
+    const workoutCount = weekWorkouts.length;
+    const totalWorkoutDuration = weekWorkouts.reduce((sum, w) => sum + w.duration, 0);
+    const totalWorkoutCalories = weekWorkouts.reduce((sum, w) => sum + w.calories, 0);
+
+    const prevWeekData: DailySteps[] = [];
+    for (let i = 13; i >= 7; i--) {
+      const date = subDays(new Date(), i);
+      const dateStr = format(date, 'yyyy-MM-dd');
+      const existing = stepHistory.find((d) => d.date === dateStr);
+      prevWeekData.push(existing || { date: dateStr, steps: 0, floors: 0, activeMinutes: 0, calories: 0, distance: 0 });
+    }
+    const prevTotalSteps = prevWeekData.reduce((sum, d) => sum + d.steps, 0);
+    const stepDelta = totalSteps - prevTotalSteps;
+    const stepDeltaPct = prevTotalSteps > 0 ? Math.round((stepDelta / prevTotalSteps) * 100) : 0;
 
     return (
       <>
@@ -71,8 +97,16 @@ export default function HistoryScreen() {
             <Text style={[styles.summaryValue, { color: c.text }]}>{totalSteps.toLocaleString()}</Text>
           </View>
           <View style={[styles.summaryRow, { borderBottomColor: c.border }]}>
+            <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>Goal</Text>
+            <Text style={[styles.summaryValue, { color: goalPercent >= 100 ? c.success : c.text }]}>{goalPercent}%</Text>
+          </View>
+          <View style={[styles.summaryRow, { borderBottomColor: c.border }]}>
             <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>Total Calories</Text>
             <Text style={[styles.summaryValue, { color: c.text }]}>{calories.toLocaleString()} kcal</Text>
+          </View>
+          <View style={[styles.summaryRow, { borderBottomColor: c.border }]}>
+            <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>Distance</Text>
+            <Text style={[styles.summaryValue, { color: c.text }]}>{totalDistance.toFixed(2)} {distanceUnit}</Text>
           </View>
           <View style={[styles.summaryRow, { borderBottomColor: c.border }]}>
             <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>Total Floors</Text>
@@ -90,6 +124,22 @@ export default function HistoryScreen() {
             <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>Days Goal Met</Text>
             <Text style={[styles.summaryValue, { color: c.text }]}>{daysGoalMet}/7</Text>
           </View>
+          <View style={[styles.summaryRow, { borderBottomColor: c.border }]}>
+            <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>Personal Record</Text>
+            <Text style={[styles.summaryValue, { color: c.success }]}>{bestDay.steps.toLocaleString()} ({bestDayName})</Text>
+          </View>
+          <View style={[styles.summaryRow, { borderBottomColor: c.border }]}>
+            <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>vs. Last Week</Text>
+            <Text style={[styles.summaryValue, { color: stepDelta >= 0 ? c.success : c.text }]}>
+              {stepDelta >= 0 ? '+' : ''}{stepDelta.toLocaleString()} ({stepDeltaPct >= 0 ? '+' : ''}{stepDeltaPct}%)
+            </Text>
+          </View>
+          {workoutCount > 0 && (
+            <View style={[styles.summaryRow, { borderBottomColor: c.border }]}>
+              <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>Workouts</Text>
+              <Text style={[styles.summaryValue, { color: c.text }]}>{workoutCount} · {totalWorkoutDuration}min · {totalWorkoutCalories}cal</Text>
+            </View>
+          )}
         </View>
       </>
     );
@@ -105,9 +155,35 @@ export default function HistoryScreen() {
     const totalSteps = monthData.reduce((sum, d) => sum + d.steps, 0);
     const totalFloors = monthData.reduce((sum, d) => sum + d.floors, 0);
     const totalActiveMinutes = monthData.reduce((sum, d) => sum + d.activeMinutes, 0);
+    const totalDistance = monthData.reduce((sum, d) => sum + d.distance, 0);
     const avgSteps = Math.round(totalSteps / daysInMonth);
     const daysGoalMet = monthData.filter((d) => d.steps >= goal).length;
     const bestDay = monthData.reduce((best, d) => d.steps > best.steps ? d : best, monthData[0]);
+    const calories = profile ? calculateCalories(totalSteps, profile.weight, profile.useMetric) : 0;
+    const goalPercent = Math.round((avgSteps / goal) * 100);
+
+    const monthStart = format(startOfMonth(today), 'yyyy-MM-dd');
+    const monthEnd = format(endOfMonth(today), 'yyyy-MM-dd');
+    const monthWorkouts = workouts.filter((w) => w.date >= monthStart && w.date <= monthEnd);
+    const workoutCount = monthWorkouts.length;
+    const totalWorkoutDuration = monthWorkouts.reduce((sum, w) => sum + w.duration, 0);
+    const totalWorkoutCalories = monthWorkouts.reduce((sum, w) => sum + w.calories, 0);
+
+    const prevMonthDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    const prevMonthStart = startOfMonth(prevMonthDate);
+    const prevMonthEnd = endOfMonth(prevMonthDate);
+    const prevMonthData: DailySteps[] = [];
+    const prevDaysInMonth = prevMonthEnd.getDate();
+    for (let i = 0; i < prevDaysInMonth; i++) {
+      const date = new Date(prevMonthStart);
+      date.setDate(date.getDate() + i);
+      const dateStr = format(date, 'yyyy-MM-dd');
+      const existing = stepHistory.find((d) => d.date === dateStr);
+      if (existing) prevMonthData.push(existing);
+    }
+    const prevTotalSteps = prevMonthData.reduce((sum, d) => sum + d.steps, 0);
+    const stepDelta = totalSteps - prevTotalSteps;
+    const stepDeltaPct = prevTotalSteps > 0 ? Math.round((stepDelta / prevTotalSteps) * 100) : 0;
 
     return (
       <>
@@ -142,6 +218,18 @@ export default function HistoryScreen() {
             <Text style={[styles.summaryValue, { color: c.text }]}>{totalSteps.toLocaleString()}</Text>
           </View>
           <View style={[styles.summaryRow, { borderBottomColor: c.border }]}>
+            <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>Goal</Text>
+            <Text style={[styles.summaryValue, { color: goalPercent >= 100 ? c.success : c.text }]}>{goalPercent}%</Text>
+          </View>
+          <View style={[styles.summaryRow, { borderBottomColor: c.border }]}>
+            <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>Total Calories</Text>
+            <Text style={[styles.summaryValue, { color: c.text }]}>{calories.toLocaleString()} kcal</Text>
+          </View>
+          <View style={[styles.summaryRow, { borderBottomColor: c.border }]}>
+            <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>Distance</Text>
+            <Text style={[styles.summaryValue, { color: c.text }]}>{totalDistance.toFixed(2)} {distanceUnit}</Text>
+          </View>
+          <View style={[styles.summaryRow, { borderBottomColor: c.border }]}>
             <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>Total Floors</Text>
             <Text style={[styles.summaryValue, { color: c.text }]}>{totalFloors}</Text>
           </View>
@@ -154,9 +242,25 @@ export default function HistoryScreen() {
             <Text style={[styles.summaryValue, { color: c.text }]}>{avgSteps.toLocaleString()}</Text>
           </View>
           <View style={[styles.summaryRow, { borderBottomColor: c.border }]}>
-            <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>Best Day</Text>
-            <Text style={[styles.summaryValue, { color: c.text }]}>{bestDay.steps.toLocaleString()} steps</Text>
+            <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>Days Goal Met</Text>
+            <Text style={[styles.summaryValue, { color: c.text }]}>{daysGoalMet}/{daysInMonth}</Text>
           </View>
+          <View style={[styles.summaryRow, { borderBottomColor: c.border }]}>
+            <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>Best Day</Text>
+            <Text style={[styles.summaryValue, { color: c.success }]}>{bestDay.steps.toLocaleString()} steps</Text>
+          </View>
+          <View style={[styles.summaryRow, { borderBottomColor: c.border }]}>
+            <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>vs. Last Month</Text>
+            <Text style={[styles.summaryValue, { color: stepDelta >= 0 ? c.success : c.text }]}>
+              {stepDelta >= 0 ? '+' : ''}{stepDelta.toLocaleString()} ({stepDeltaPct >= 0 ? '+' : ''}{stepDeltaPct}%)
+            </Text>
+          </View>
+          {workoutCount > 0 && (
+            <View style={[styles.summaryRow, { borderBottomColor: c.border }]}>
+              <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>Workouts</Text>
+              <Text style={[styles.summaryValue, { color: c.text }]}>{workoutCount} · {totalWorkoutDuration}min · {totalWorkoutCalories}cal</Text>
+            </View>
+          )}
         </View>
       </>
     );
@@ -165,12 +269,39 @@ export default function HistoryScreen() {
   const renderYearView = () => {
     const yearData = getYearHistory();
     const maxSteps = Math.max(...yearData.map((d) => d.steps), 1);
+    const today = new Date();
+    const monthsElapsed = today.getMonth() + 1;
 
     const totalSteps = yearData.reduce((sum, d) => sum + d.steps, 0);
     const totalFloors = yearData.reduce((sum, d) => sum + d.floors, 0);
     const totalActiveMinutes = yearData.reduce((sum, d) => sum + d.activeMinutes, 0);
-    const avgSteps = Math.round(totalSteps / (new Date().getMonth() + 1));
+    const totalDistance = yearData.reduce((sum, d) => sum + d.distance, 0);
+    const avgSteps = Math.round(totalSteps / monthsElapsed);
     const monthsGoalMet = yearData.filter((d) => d.steps >= goal * 30).length;
+    const calories = profile ? calculateCalories(totalSteps, profile.weight, profile.useMetric) : 0;
+    const goalPercent = Math.round((avgSteps / (goal * 30)) * 100);
+    const bestMonth = yearData.reduce((best, d) => d.steps > best.steps ? d : best, yearData[0]);
+    const bestMonthName = months[parseInt(bestMonth.date.split('-')[1], 10) - 1];
+
+    const yearStart = format(startOfYear(today), 'yyyy-MM-dd');
+    const yearEnd = format(today, 'yyyy-MM-dd');
+    const yearWorkouts = workouts.filter((w) => w.date >= yearStart && w.date <= yearEnd);
+    const workoutCount = yearWorkouts.length;
+    const totalWorkoutDuration = yearWorkouts.reduce((sum, w) => sum + w.duration, 0);
+    const totalWorkoutCalories = yearWorkouts.reduce((sum, w) => sum + w.calories, 0);
+
+    const lastYear = today.getFullYear() - 1;
+    let prevYearSteps = 0;
+    for (let month = 0; month < 12; month++) {
+      const daysInMonth = new Date(lastYear, month + 1, 0).getDate();
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = `${lastYear}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const existing = stepHistory.find((d) => d.date === dateStr);
+        if (existing) prevYearSteps += existing.steps;
+      }
+    }
+    const stepDelta = totalSteps - prevYearSteps;
+    const stepDeltaPct = prevYearSteps > 0 ? Math.round((stepDelta / prevYearSteps) * 100) : 0;
 
     return (
       <>
@@ -203,6 +334,18 @@ export default function HistoryScreen() {
             <Text style={[styles.summaryValue, { color: c.text }]}>{totalSteps.toLocaleString()}</Text>
           </View>
           <View style={[styles.summaryRow, { borderBottomColor: c.border }]}>
+            <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>Goal</Text>
+            <Text style={[styles.summaryValue, { color: goalPercent >= 100 ? c.success : c.text }]}>{goalPercent}%</Text>
+          </View>
+          <View style={[styles.summaryRow, { borderBottomColor: c.border }]}>
+            <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>Total Calories</Text>
+            <Text style={[styles.summaryValue, { color: c.text }]}>{calories.toLocaleString()} kcal</Text>
+          </View>
+          <View style={[styles.summaryRow, { borderBottomColor: c.border }]}>
+            <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>Distance</Text>
+            <Text style={[styles.summaryValue, { color: c.text }]}>{totalDistance.toFixed(2)} {distanceUnit}</Text>
+          </View>
+          <View style={[styles.summaryRow, { borderBottomColor: c.border }]}>
             <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>Total Floors</Text>
             <Text style={[styles.summaryValue, { color: c.text }]}>{totalFloors}</Text>
           </View>
@@ -216,15 +359,33 @@ export default function HistoryScreen() {
           </View>
           <View style={[styles.summaryRow, { borderBottomColor: c.border }]}>
             <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>Months Goal Met</Text>
-            <Text style={[styles.summaryValue, { color: c.text }]}>{monthsGoalMet}/{yearData.length}</Text>
+            <Text style={[styles.summaryValue, { color: c.text }]}>{monthsGoalMet}/{monthsElapsed}</Text>
           </View>
+          <View style={[styles.summaryRow, { borderBottomColor: c.border }]}>
+            <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>Best Month</Text>
+            <Text style={[styles.summaryValue, { color: c.success }]}>{bestMonthName} · {bestMonth.steps.toLocaleString()} steps</Text>
+          </View>
+          <View style={[styles.summaryRow, { borderBottomColor: c.border }]}>
+            <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>vs. Last Year</Text>
+            <Text style={[styles.summaryValue, { color: stepDelta >= 0 ? c.success : c.text }]}>
+              {stepDelta >= 0 ? '+' : ''}{stepDelta.toLocaleString()} ({stepDeltaPct >= 0 ? '+' : ''}{stepDeltaPct}%)
+            </Text>
+          </View>
+          {workoutCount > 0 && (
+            <View style={[styles.summaryRow, { borderBottomColor: c.border }]}>
+              <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>Workouts</Text>
+              <Text style={[styles.summaryValue, { color: c.text }]}>{workoutCount} · {totalWorkoutDuration}min · {totalWorkoutCalories}cal</Text>
+            </View>
+          )}
         </View>
       </>
     );
   };
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: c.background }]}>
+    <View style={{ flex: 1, backgroundColor: c.background }}>
+      <View style={{ height: insets.top }} />
+      <ScrollView style={{ flex: 1, paddingHorizontal: 20 }} contentContainerStyle={{ paddingBottom: 60 }}>
       <View style={styles.header}>
         <Text style={[styles.title, { color: c.text }]}>History</Text>
         <Text style={[styles.subtitle, { color: c.textTertiary }]}>Your fitness journey</Text>
@@ -263,12 +424,12 @@ export default function HistoryScreen() {
       {viewMode === 'month' && renderMonthView()}
       {viewMode === 'year' && renderYearView()}
     </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20 },
-  header: { marginTop: 50, marginBottom: 20 },
+  header: { marginBottom: 20 },
   title: { fontSize: 28, fontWeight: 'bold' },
   subtitle: { fontSize: 16, marginTop: 4 },
   streakCard: { borderRadius: 16, padding: 20, flexDirection: 'row', alignItems: 'center', marginBottom: 24, elevation: 2 },

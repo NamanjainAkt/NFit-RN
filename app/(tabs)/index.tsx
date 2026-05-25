@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { View, Text, StyleSheet, Dimensions, Animated } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useUserStore } from '../../store/userStore';
@@ -31,12 +32,13 @@ export default function HomeScreen() {
 
   const { profile, todaySteps, todayFloors, todayActiveMinutes, stepStreak, calories, distance, distanceUnit, goal, goalReached } = stats;
   const { isSimulated, progressAnim, pulseAnim } = stepTracker;
+  const insets = useSafeAreaInsets();
   const darkMode = profile?.darkMode ?? false;
   const c = getColors(darkMode);
   const ringSize = width * 0.65;
 
   return (
-    <View style={[styles.container, { backgroundColor: c.background }]}>
+    <View style={[styles.container, { backgroundColor: c.background, paddingTop: insets.top + 20 }]}>
       <View style={styles.header}>
         <Text style={[styles.greeting, { color: c.text }]}>Hello, {profile.name}</Text>
         <Text style={[styles.date, { color: c.textTertiary }]}>{format(new Date(), 'EEEE, MMMM d')}</Text>
@@ -93,8 +95,8 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20 },
-  header: { marginTop: 50, marginBottom: 20 },
+  container: { flex: 1, paddingHorizontal: 20, paddingBottom: 80 },
+  header: { marginBottom: 20 },
   greeting: { fontSize: 28, fontWeight: 'bold' },
   date: { fontSize: 16, marginTop: 4 },
   ringContainer: { alignItems: 'center', justifyContent: 'center', marginVertical: 20 },

@@ -1,5 +1,4 @@
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const FileSystem = require('expo-file-system');
+import * as FileSystem from 'expo-file-system/legacy';
 import Sharing from 'expo-sharing';
 import { DailySteps } from '../store/fitnessStore';
 import { Workout } from '../store/userStore';
