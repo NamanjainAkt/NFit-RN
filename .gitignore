@@ -43,3 +43,7 @@ tmp-export-test/
 # generated native folders
 /ios
 /android
+
+# Android / Gradle build artifacts
+**/build/
+.gradle/

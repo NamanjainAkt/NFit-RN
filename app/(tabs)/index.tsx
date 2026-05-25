@@ -1,5 +1,6 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Dimensions, Animated } from 'react-native';
+import Confetti from '../../components/Confetti';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -18,7 +19,16 @@ export default function HomeScreen() {
   
   const stepTracker = useStepTracker();
   const stats = useFitnessStats();
-  
+  const [confettiKey, setConfettiKey] = useState(0);
+  const prevGoalRef = useRef(false);
+
+  useEffect(() => {
+    if (stats?.goalReached && !prevGoalRef.current) {
+      setConfettiKey((k) => k + 1);
+    }
+    if (stats) prevGoalRef.current = stats.goalReached;
+  }, [stats?.goalReached]);
+
   useEffect(() => {
     if (!hasCompletedOnboarding) router.replace('/onboarding');
   }, [hasCompletedOnboarding]);
@@ -90,6 +100,7 @@ export default function HomeScreen() {
         </View>
       </View>
       {isSimulated && <View style={[styles.warningCard, { backgroundColor: c.surface, borderColor: c.border, borderWidth: 1 }]}><Text style={[styles.warningText, { color: c.textTertiary }]}>Demo mode - steps simulated</Text></View>}
+      {confettiKey > 0 && <Confetti key={confettiKey} />}
     </View>
   );
 }

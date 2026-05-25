@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { format } from 'date-fns';
 import { zustandStorage } from '../utils/storage';
 import { calculateCalories, calculateDistance } from '../utils/calculations';
+import { saveDailySteps } from '../utils/database';
 import { useUserStore } from './userStore';
 
 export interface DailySteps {
@@ -21,6 +22,7 @@ interface FitnessState {
   stepHistory: DailySteps[];
   currentStreak: number;
   setTodaySteps: (steps: number) => void;
+  setStepHistory: (history: DailySteps[]) => void;
   syncTodayWithHistory: () => void;
   setTodayFloors: (floors: number) => void;
   setTodayActiveMinutes: (minutes: number) => void;
@@ -40,14 +42,16 @@ export const useFitnessStore = create<FitnessState>()(
       currentStreak: 0,
       setTodaySteps: (steps) => {
         set({ todaySteps: steps });
-        get().syncTodayWithHistory();
       },
+      setStepHistory: (history) => set({ stepHistory: history }),
       syncTodayWithHistory: () => {
         const { todaySteps, todayFloors, todayActiveMinutes, recordDay } = get();
         const profile = useUserStore.getState().profile;
         const calories = profile ? calculateCalories(todaySteps, profile.weight, profile.useMetric) : 0;
         const distance = profile ? calculateDistance(todaySteps, profile.height, profile.useMetric) : 0;
-        recordDay({ steps: todaySteps, floors: todayFloors, activeMinutes: todayActiveMinutes, calories, distance });
+        const entry = { steps: todaySteps, floors: todayFloors, activeMinutes: todayActiveMinutes, calories, distance };
+        recordDay(entry);
+        saveDailySteps({ ...entry, date: format(new Date(), 'yyyy-MM-dd') });
       },
       setTodayFloors: (floors) => {
         set({ todayFloors: floors });
