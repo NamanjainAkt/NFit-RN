@@ -14,7 +14,10 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.nfit.app"
+      "bundleIdentifier": "com.nfit.app",
+      "infoPlist": {
+        "NSMotionUsageDescription": "This app requires access to the pedometer and motion sensors to track your daily steps and physical activities."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -28,8 +31,13 @@
         "android.permission.ACTIVITY_RECOGNITION",
         "android.permission.BODY_SENSORS",
         "android.permission.HIGH_SAMPLING_RATE_SENSORS",
-        "android.permission.POST_NOTIFICATIONS"
-      ]
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.WAKE_LOCK",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_HEALTH"
+      ],
     },
     "web": {
       "favicon": "./assets/favicon.png",

@@ -23,6 +23,7 @@ interface FitnessState {
   currentStreak: number;
   setTodaySteps: (steps: number) => void;
   setStepHistory: (history: DailySteps[]) => void;
+  resetData: () => void;
   syncTodayWithHistory: () => void;
   setTodayFloors: (floors: number) => void;
   setTodayActiveMinutes: (minutes: number) => void;
@@ -40,6 +41,13 @@ export const useFitnessStore = create<FitnessState>()(
       todayActiveMinutes: 0,
       stepHistory: [],
       currentStreak: 0,
+      resetData: () => set({
+        todaySteps: 0,
+        todayFloors: 0,
+        todayActiveMinutes: 0,
+        stepHistory: [],
+        currentStreak: 0,
+      }),
       setTodaySteps: (steps) => {
         set({ todaySteps: steps });
       },
@@ -55,11 +63,9 @@ export const useFitnessStore = create<FitnessState>()(
       },
       setTodayFloors: (floors) => {
         set({ todayFloors: floors });
-        get().syncTodayWithHistory();
       },
       setTodayActiveMinutes: (minutes) => {
         set({ todayActiveMinutes: minutes });
-        get().syncTodayWithHistory();
       },
       recordDay: (data) => {
         const today = format(new Date(), 'yyyy-MM-dd');

@@ -1,0 +1,6 @@
+{
+  "name": "nfit-background-steps",
+  "version": "1.0.0",
+  "main": "src/BackgroundStepsModule.ts",
+  "react-native": "src/BackgroundStepsModule.ts"
+}

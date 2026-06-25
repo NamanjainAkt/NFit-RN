@@ -42,6 +42,7 @@ interface UserState {
   setHasCompletedOnboarding: (value: boolean) => void;
   updateStepStreak: (today: string) => void;
   updateProfile: (updates: Partial<UserProfile>) => void;
+  resetData: () => void;
   addWorkout: (workout: Omit<Workout, 'id' | 'date'>) => void;
   removeWorkout: (id: string) => void;
   getWorkouts: () => Workout[];
@@ -95,9 +96,17 @@ export const useUserStore = create<UserState>()(
         };
         set((state) => ({ workouts: [...state.workouts, newWorkout] }));
       },
-      removeWorkout: (id) => {
-        set((state) => ({ workouts: state.workouts.filter((w) => w.id !== id) }));
-      },
+  resetData: () => set({
+    profile: null,
+    hasCompletedOnboarding: false,
+    stepStreak: 0,
+    lastActiveDate: null,
+    workouts: [],
+    workoutGoals: [],
+  }),
+  removeWorkout: (id) => {
+    set((state) => ({ workouts: state.workouts.filter((w) => w.id !== id) }));
+  },
       getWorkouts: () => {
         return get().workouts;
       },

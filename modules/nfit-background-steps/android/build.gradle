@@ -1,0 +1,18 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'expo.modules.nfitbackgroundsteps'
+version = ''
+
+android {
+  namespace "expo.modules.nfitbackgroundsteps"
+  defaultConfig {
+    versionCode 1
+    versionName ""
+  }
+  lintOptions {
+    abortOnError false
+  }
+}

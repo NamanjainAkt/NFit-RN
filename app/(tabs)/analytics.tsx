@@ -5,6 +5,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useUserStore } from '../../store/userStore';
 import { useFitnessStore } from '../../store/fitnessStore';
 import { getColors } from '../../utils/theme';
+import { calculateCalories } from '../../utils/calculations';
 import { format, subDays, startOfMonth, endOfMonth, getDay, getDaysInMonth } from 'date-fns';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -48,12 +49,18 @@ export default function AnalyticsScreen() {
       case '7d': start = subDays(end, 6); break;
       case '30d': start = subDays(end, 29); break;
       case '90d': start = subDays(end, 89); break;
-      case 'custom':
+      case 'custom': {
+        const parsedStart = new Date(customStart);
+        const parsedEnd = new Date(customEnd);
+        const validStart = !isNaN(parsedStart.getTime()) ? parsedStart : end;
+        const validEnd = !isNaN(parsedEnd.getTime()) ? parsedEnd : end;
+        const days = Math.round((validEnd.getTime() - validStart.getTime()) / 86400000) + 1;
         return {
-          startDate: new Date(customStart || end),
-          endDate: new Date(customEnd || end),
-          numDays: 1,
+          startDate: validStart,
+          endDate: validEnd,
+          numDays: Math.max(days, 1),
         };
+      }
     }
     return { startDate: start, endDate: end, numDays: Math.round((end.getTime() - start.getTime()) / 86400000) + 1 };
   }, [rangePreset, customStart, customEnd]);
@@ -71,6 +78,7 @@ export default function AnalyticsScreen() {
   const totalActiveMinSum = filteredHistory.reduce((s, d) => s + d.activeMinutes, 0);
   const avgSteps = numDays > 0 ? Math.round(totalSteps / numDays) : 0;
   const todayGoalPct = Math.min(todaySteps / goal, 1);
+  const todayCalories = profile ? calculateCalories(todaySteps, profile.weight, profile.useMetric) : 0;
 
   const showEveryN = useMemo(() => {
     const len = filteredHistory.length;
@@ -225,7 +233,7 @@ export default function AnalyticsScreen() {
               {[
                 { icon: 'stairs' as const, value: todayFloors, label: 'Floors' },
                 { icon: 'timer' as const, value: todayActiveMinutes, label: 'Active Min' },
-                { icon: 'local-fire-department' as const, value: totalCalories, label: 'Calories' },
+                { icon: 'local-fire-department' as const, value: todayCalories, label: 'Calories' },
               ].map((s) => (
                 <View key={s.label} style={styles.goalStat}>
                   <MaterialIcons name={s.icon} size={20} color={c.textTertiary} />

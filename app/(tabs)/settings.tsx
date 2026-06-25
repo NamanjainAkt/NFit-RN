@@ -1,12 +1,22 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, TextInput, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, TextInput, Alert, ActivityIndicator, Linking, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
+import { requireNativeModule } from 'expo';
 import { useUserStore } from '../../store/userStore';
 import { useFitnessStore } from '../../store/fitnessStore';
+import { getDb } from '../../utils/database';
 import { useRouter } from 'expo-router';
 import { getColors } from '../../utils/theme';
 import { shareData, ExportData } from '../../utils/export';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { checkActivityPermission, requestActivityPermission, checkNotificationPermission, requestNotificationPermission } from '../../utils/permissions';
+
+let backgroundStepsModule: any = null;
+if (Platform.OS === 'android') {
+  try {
+    backgroundStepsModule = requireNativeModule('BackgroundStepsModule');
+  } catch {}
+}
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -17,6 +27,82 @@ export default function SettingsScreen() {
   const stepHistory = useFitnessStore((state) => state.stepHistory);
   
   const [isExporting, setIsExporting] = useState(false);
+  const [activityGranted, setActivityGranted] = useState<boolean | null>(null);
+  const [notificationsGranted, setNotificationsGranted] = useState<boolean | null>(null);
+  const [backgroundServiceOn, setBackgroundServiceOn] = useState(false);
+
+  const loadPermissions = async () => {
+    const act = await checkActivityPermission();
+    const notif = await checkNotificationPermission();
+    setActivityGranted(act);
+    setNotificationsGranted(notif);
+
+    if (Platform.OS === 'android' && backgroundStepsModule) {
+      try {
+        const running = await backgroundStepsModule.isServiceRunning();
+        setBackgroundServiceOn(running);
+      } catch {}
+    }
+  };
+
+  useEffect(() => {
+    loadPermissions();
+  }, []);
+
+  const handleBackgroundServiceToggle = async (value: boolean) => {
+    if (!backgroundStepsModule) return;
+    setBackgroundServiceOn(value);
+    try {
+      if (value) {
+        await backgroundStepsModule.startService();
+      } else {
+        await backgroundStepsModule.stopService();
+      }
+    } catch {
+      setBackgroundServiceOn(!value);
+    }
+  };
+
+  const handleRequestActivity = async () => {
+    const granted = await requestActivityPermission();
+    setActivityGranted(granted);
+    if (!granted) {
+      Alert.alert(
+        'Permission Required',
+        'Activity recognition permission was not granted. Please enable it in system settings to track steps.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Open Settings', onPress: () => Linking.openSettings() }
+        ]
+      );
+    }
+  };
+
+  const handleRequestNotifications = async () => {
+    const granted = await requestNotificationPermission();
+    setNotificationsGranted(granted);
+    if (!granted) {
+      Alert.alert(
+        'Permission Required',
+        'Notification permission was not granted. Please enable it in system settings to receive goal reminders.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Open Settings', onPress: () => Linking.openSettings() }
+        ]
+      );
+    }
+  };
+
+  const handleConfigureBattery = () => {
+    if (Platform.OS === 'android') {
+      Linking.openSettings();
+      Alert.alert(
+        'Configure Background Battery',
+        'Please go to "Battery" or "Battery usage" in Settings, and choose "Unrestricted" for Nfit to prevent step tracking from stopping in the background.',
+        [{ text: 'OK' }]
+      );
+    }
+  };
 
   if (!profile) return null;
 
@@ -79,10 +165,25 @@ export default function SettingsScreen() {
     }
   };
 
+  const resetAllData = useUserStore((state) => state.resetData);
+  const resetFitnessData = useFitnessStore((state) => state.resetData);
+
   const handleResetData = () => {
     Alert.alert('Reset All Data', 'This will delete all your progress. This action cannot be undone.', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Reset', style: 'destructive', onPress: () => { setHasCompletedOnboarding(false); router.replace('/onboarding'); } },
+      {
+        text: 'Reset',
+        style: 'destructive',
+        onPress: async () => {
+          resetAllData();
+          resetFitnessData();
+          try {
+            const db = await getDb();
+            await db.execAsync('DELETE FROM daily_steps; DELETE FROM step_counter_state; DELETE FROM workouts; DELETE FROM profile; DELETE FROM app_state;');
+          } catch {}
+          router.replace('/onboarding');
+        },
+      },
     ]);
   };
 
@@ -242,6 +343,101 @@ export default function SettingsScreen() {
       </View>
 
       <View style={styles.section}>
+        <Text style={[styles.sectionTitle, { color: c.textTertiary }]}>Permissions & Background</Text>
+        <View style={[styles.card, { backgroundColor: c.surface }]}>
+          {/* Activity Recognition */}
+          <View style={[styles.row, { borderBottomColor: c.border }]}>
+            <View style={styles.rowLeftSpec}>
+              <MaterialIcons name="directions-walk" size={24} color={c.text} />
+              <View style={styles.permissionInfo}>
+                <Text style={[styles.rowLabelSpec, { color: c.text }]}>Activity Tracking</Text>
+                <Text style={[styles.permissionDesc, { color: c.textTertiary }]}>Required to count steps and track exercise</Text>
+              </View>
+            </View>
+            <TouchableOpacity 
+              style={[
+                styles.permissionBtn, 
+                { backgroundColor: activityGranted ? 'rgba(76, 175, 80, 0.15)' : c.border }
+              ]} 
+              onPress={activityGranted ? undefined : handleRequestActivity}
+              disabled={activityGranted === true}
+            >
+              <Text style={[
+                styles.permissionBtnText, 
+                { color: activityGranted ? c.success : c.text }
+              ]}>
+                {activityGranted === null ? 'Loading...' : activityGranted ? 'Granted' : 'Grant'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Notifications */}
+          <View style={[styles.row, { borderBottomColor: c.border }]}>
+            <View style={styles.rowLeftSpec}>
+              <MaterialIcons name="notifications" size={24} color={c.text} />
+              <View style={styles.permissionInfo}>
+                <Text style={[styles.rowLabelSpec, { color: c.text }]}>Notifications</Text>
+                <Text style={[styles.permissionDesc, { color: c.textTertiary }]}>Receive goal alerts and reminders</Text>
+              </View>
+            </View>
+            <TouchableOpacity 
+              style={[
+                styles.permissionBtn, 
+                { backgroundColor: notificationsGranted ? 'rgba(76, 175, 80, 0.15)' : c.border }
+              ]} 
+              onPress={notificationsGranted ? undefined : handleRequestNotifications}
+              disabled={notificationsGranted === true}
+            >
+              <Text style={[
+                styles.permissionBtnText, 
+                { color: notificationsGranted ? c.success : c.text }
+              ]}>
+                {notificationsGranted === null ? 'Loading...' : notificationsGranted ? 'Granted' : 'Grant'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Background Battery optimization (Android only) */}
+          {Platform.OS === 'android' && (
+            <View style={[styles.row, { borderBottomColor: c.border }]}>
+              <View style={styles.rowLeftSpec}>
+                <MaterialIcons name="battery-alert" size={24} color={c.text} />
+                <View style={styles.permissionInfo}>
+                  <Text style={[styles.rowLabelSpec, { color: c.text }]}>Battery Optimization</Text>
+                  <Text style={[styles.permissionDesc, { color: c.textTertiary }]}>Allow unrestricted background execution</Text>
+                </View>
+              </View>
+              <TouchableOpacity 
+                style={[styles.permissionBtn, { backgroundColor: c.border }]} 
+                onPress={handleConfigureBattery}
+              >
+                <Text style={[styles.permissionBtnText, { color: c.text }]}>Configure</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Background step tracking service (Android only) */}
+          {Platform.OS === 'android' && (
+            <View style={[styles.row, {}]}>
+              <View style={styles.rowLeftSpec}>
+                <MaterialIcons name="directions-run" size={24} color={c.text} />
+                <View style={styles.permissionInfo}>
+                  <Text style={[styles.rowLabelSpec, { color: c.text }]}>Background Tracking</Text>
+                  <Text style={[styles.permissionDesc, { color: c.textTertiary }]}>Keep tracking steps when the app is closed</Text>
+                </View>
+              </View>
+              <Switch
+                value={backgroundServiceOn}
+                onValueChange={handleBackgroundServiceToggle}
+                trackColor={{ false: c.border, true: c.secondary }}
+                thumbColor={c.primary}
+              />
+            </View>
+          )}
+        </View>
+      </View>
+
+      <View style={styles.section}>
         <Text style={[styles.sectionTitle, { color: c.textTertiary }]}>Data</Text>
         <View style={[styles.card, { backgroundColor: c.surface, marginBottom: 12 }]}>
           <TouchableOpacity style={[styles.row, { borderBottomColor: c.border }]} onPress={handleExportData} disabled={isExporting}>
@@ -284,4 +480,10 @@ const styles = StyleSheet.create({
   dangerButtonText: { fontSize: 16, fontWeight: '600', marginLeft: 8 },
   footer: { alignItems: 'center', paddingVertical: 24 },
   footerText: { fontSize: 12, marginTop: 4 },
+  rowLeftSpec: { flexDirection: 'row', alignItems: 'center', flex: 1, paddingRight: 8 },
+  rowLabelSpec: { fontSize: 16, fontWeight: '600' },
+  permissionInfo: { marginLeft: 12, flex: 1 },
+  permissionDesc: { fontSize: 12, marginTop: 2 },
+  permissionBtn: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 8, minWidth: 80, alignItems: 'center', justifyContent: 'center' },
+  permissionBtnText: { fontSize: 14, fontWeight: '600' },
 });

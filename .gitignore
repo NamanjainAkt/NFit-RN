@@ -47,3 +47,6 @@ tmp-export-test/
 # Android / Gradle build artifacts
 **/build/
 .gradle/
+
+# OpenCode tool metadata
+.commandcode/

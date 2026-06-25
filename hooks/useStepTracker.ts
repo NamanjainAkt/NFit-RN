@@ -7,6 +7,14 @@ import { useUserStore } from '../store/userStore';
 import { useFitnessStore } from '../store/fitnessStore';
 import { sendGoalReachedNotification, sendStreakNotification } from '../utils/notifications';
 import { loadStepCounterState, saveStepCounterState, saveDailySteps, loadDailyStepsForDate, loadAllDailySteps } from '../utils/database';
+import { calculateCalories, calculateDistance } from '../utils/calculations';
+
+let backgroundStepsModule: any = null;
+if (Platform.OS === 'android') {
+  try {
+    backgroundStepsModule = requireNativeModule('BackgroundStepsModule');
+  } catch {}
+}
 
 export function useStepTracker() {
   const profile = useUserStore((state) => state.profile);
@@ -23,6 +31,7 @@ export function useStepTracker() {
 
   const [isSimulated, setIsSimulated] = useState(false);
   const [goalNotified, setGoalNotified] = useState(false);
+  const [backgroundServiceActive, setBackgroundServiceActive] = useState(false);
   const progressAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const profileRef = useRef(profile);
@@ -37,8 +46,21 @@ export function useStepTracker() {
   const lastSensorStepsRef = useRef(0);
   const stepRateWindowRef = useRef<{ increment: number; time: number }[]>([]);
   const saveTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const reconcileTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const appStateRef = useRef(AppState.currentState);
   const widgetModuleRef = useRef<any>(null);
+  const currentDateRef = useRef(format(new Date(), 'yyyy-MM-dd'));
+  const isResettingDayRef = useRef(false);
+
+  const syncWidget = useCallback(async (steps: number, goal: number) => {
+    if (Platform.OS !== 'android') return;
+    try {
+      if (!widgetModuleRef.current) {
+        widgetModuleRef.current = requireNativeModule('NfitWidgetModule');
+      }
+      await widgetModuleRef.current.updateWidget(steps, goal);
+    } catch {}
+  }, []);
 
   const persistSteps = useCallback(async (steps: number) => {
     await saveStepCounterState(steps);
@@ -53,15 +75,109 @@ export function useStepTracker() {
     });
   }, []);
 
-  const syncWidget = useCallback(async (steps: number, goal: number) => {
-    if (Platform.OS !== 'android') return;
+  /** Read accumulated steps from the native foreground service (Android only) */
+  const getNativeAccumulatedSteps = useCallback(async (): Promise<number> => {
+    if (!backgroundStepsModule) return 0;
     try {
-      if (!widgetModuleRef.current) {
-        widgetModuleRef.current = requireNativeModule('NfitWidgetModule');
+      return await backgroundStepsModule.getAccumulatedSteps();
+    } catch {
+      return 0;
+    }
+  }, []);
+
+  /** Start the native foreground service */
+  const startBackgroundService = useCallback(async () => {
+    if (!backgroundStepsModule) return;
+    try {
+      const running = await backgroundStepsModule.isServiceRunning();
+      if (!running) {
+        await backgroundStepsModule.startService();
       }
-      await widgetModuleRef.current.updateWidget(steps, goal);
+      setBackgroundServiceActive(true);
     } catch {}
   }, []);
+
+  /** Reconcile our JS-side accumulated count with the native service */
+  const reconcileWithNative = useCallback(async () => {
+    if (!backgroundStepsModule) return false;
+    try {
+      const nativeSteps = await backgroundStepsModule.getAccumulatedSteps();
+      if (nativeSteps === 0) return false;
+
+      const currentTotal = accumulatedRef.current +
+        Math.max(0, (maxDeltaRef.current || 0) - (sessionBaseRef.current || 0));
+
+      if (nativeSteps > currentTotal) {
+        const delta = nativeSteps - currentTotal;
+        accumulatedRef.current += delta;
+
+        const currentProfile = profileRef.current;
+        if (currentProfile) {
+          setTodaySteps(accumulatedRef.current);
+          setTodayFloors(Math.floor(accumulatedRef.current / 200));
+          setTodayActiveMinutes(Math.floor(accumulatedRef.current / 100));
+          syncWidget(accumulatedRef.current, currentProfile.dailyStepGoal || 10000);
+        }
+        return true;
+      }
+    } catch {}
+    return false;
+  }, [setTodaySteps, setTodayFloors, setTodayActiveMinutes, syncWidget]);
+
+  const checkDayChange = useCallback(async () => {
+    const today = format(new Date(), 'yyyy-MM-dd');
+    if (currentDateRef.current === today) return;
+    if (isResettingDayRef.current) return;
+    isResettingDayRef.current = true;
+
+    try {
+      const lastDaySteps = accumulatedRef.current +
+        Math.max(0, (maxDeltaRef.current || 0) - (sessionBaseRef.current || 0));
+      const lastDate = currentDateRef.current;
+
+      const currentProfile = profileRef.current;
+      await saveDailySteps({
+        date: lastDate,
+        steps: lastDaySteps,
+        floors: Math.floor(lastDaySteps / 200),
+        activeMinutes: Math.floor(lastDaySteps / 100),
+        calories: currentProfile ? calculateCalories(lastDaySteps, currentProfile.weight, currentProfile.useMetric) : 0,
+        distance: currentProfile ? calculateDistance(lastDaySteps, currentProfile.height, currentProfile.useMetric) : 0,
+      });
+
+      accumulatedRef.current = 0;
+      sessionBaseRef.current = 0;
+      maxDeltaRef.current = 0;
+      lastSensorStepsRef.current = 0;
+      lastEventTimeRef.current = 0;
+      currentDateRef.current = today;
+      setGoalNotified(false);
+
+      setTodaySteps(0);
+      setTodayFloors(0);
+      setTodayActiveMinutes(0);
+
+      progressAnim.setValue(0);
+      pulseAnim.setValue(1);
+
+      await saveStepCounterState(0);
+      await saveDailySteps({ date: today, steps: 0, floors: 0, activeMinutes: 0, calories: 0, distance: 0 });
+
+      if (Platform.OS === 'android' && backgroundStepsModule) {
+        try {
+          await backgroundStepsModule.resetForNewDay();
+        } catch {}
+      }
+
+      if (currentProfile) {
+        syncWidget(0, currentProfile.dailyStepGoal || 10000);
+      }
+
+      loadAllDailySteps().then(setStepHistory);
+    } finally {
+      isResettingDayRef.current = false;
+    }
+  }, [setTodaySteps, setTodayFloors, setTodayActiveMinutes, progressAnim, pulseAnim, syncWidget, setStepHistory]);
 
   const handleSteps = useCallback((delta: number) => {
     const currentProfile = profileRef.current;
@@ -159,25 +275,57 @@ export function useStepTracker() {
       const state = await loadStepCounterState();
       const today = format(new Date(), 'yyyy-MM-dd');
 
-      if (state.lastUpdatedDate !== today) {
-        accumulatedRef.current = 0;
-        await saveStepCounterState(0);
+      // Start the native background service so steps are tracked even when app is in background
+      if (Platform.OS === 'android') {
+        await startBackgroundService();
+
+        // Read native accumulated steps — this catches steps tracked while app was killed
+        const nativeSteps = await getNativeAccumulatedSteps();
+        if (nativeSteps > 0) {
+          const savedDate = state.lastUpdatedDate;
+          if (savedDate === today) {
+            accumulatedRef.current = Math.max(state.accumulatedSteps, nativeSteps);
+          } else if (nativeSteps > 0) {
+            // Native service has today's data but SQLite doesn't. Use native count.
+            accumulatedRef.current = nativeSteps;
+          }
+        } else {
+          // No native steps, fall back to SQLite persist
+          if (state.lastUpdatedDate !== today) {
+            accumulatedRef.current = 0;
+            await saveStepCounterState(0);
+          } else {
+            accumulatedRef.current = state.accumulatedSteps;
+          }
+        }
       } else {
-        accumulatedRef.current = state.accumulatedSteps;
+        // iOS or other — no background service, use SQLite solely
+        if (state.lastUpdatedDate !== today) {
+          accumulatedRef.current = 0;
+          await saveStepCounterState(0);
+        } else {
+          accumulatedRef.current = state.accumulatedSteps;
+        }
       }
 
+      // Track the current date for live day-change detection
+      currentDateRef.current = today;
+
+      // Load today's saved data from SQLite to restore the UI state
       const saved = await loadDailyStepsForDate(today);
-      if (saved) {
-        setTodaySteps(saved.steps);
-        setTodayFloors(saved.floors);
-        setTodayActiveMinutes(saved.activeMinutes);
+      if (saved && saved.steps > 0) {
+        const finalSteps = Math.max(saved.steps, accumulatedRef.current);
+        setTodaySteps(finalSteps);
+        setTodayFloors(Math.floor(finalSteps / 200));
+        setTodayActiveMinutes(Math.floor(finalSteps / 100));
         const goal = profileRef.current?.dailyStepGoal || 10000;
-        syncWidget(saved.steps, goal);
+        syncWidget(finalSteps, goal);
       } else {
-        const loaded = state.lastUpdatedDate === today ? state.accumulatedSteps : 0;
-        setTodaySteps(loaded);
+        setTodaySteps(accumulatedRef.current);
         const goal = profileRef.current?.dailyStepGoal || 10000;
-        syncWidget(loaded, goal);
+        syncWidget(accumulatedRef.current, goal);
+        setTodayFloors(Math.floor(accumulatedRef.current / 200));
+        setTodayActiveMinutes(Math.floor(accumulatedRef.current / 100));
       }
 
       loadAllDailySteps().then((all) => {
@@ -190,22 +338,54 @@ export function useStepTracker() {
 
     init();
 
+    // Periodic persist to SQLite every 30 seconds
     saveTimerRef.current = setInterval(async () => {
-      const steps = accumulatedRef.current + Math.max(0, (maxDeltaRef.current || 0) - (sessionBaseRef.current || 0));
+      await checkDayChange();
+
+      const steps = accumulatedRef.current +
+        Math.max(0, (maxDeltaRef.current || 0) - (sessionBaseRef.current || 0));
       await persistSteps(steps);
+
+      // Also reconcile with native service every 30 seconds
+      if (Platform.OS === 'android') {
+        await reconcileWithNative();
+      }
     }, 30000);
 
+    // Fast reconciliation timer — catches up with native service and detects day changes
+    reconcileTimerRef.current = setInterval(async () => {
+      await checkDayChange();
+      if (Platform.OS === 'android') {
+        await reconcileWithNative();
+      }
+    }, 10000);
+
+    // Handle app state changes
     const sub = AppState.addEventListener('change', async (nextState: AppStateStatus) => {
-      if (appStateRef.current === 'active' && nextState.match(/inactive|background/)) {
-        const steps = accumulatedRef.current + Math.max(0, (maxDeltaRef.current || 0) - (sessionBaseRef.current || 0));
+      const prevState = appStateRef.current;
+
+      // App moved to background — persist steps
+      if (prevState === 'active' && nextState.match(/inactive|background/)) {
+        const steps = accumulatedRef.current +
+          Math.max(0, (maxDeltaRef.current || 0) - (sessionBaseRef.current || 0));
         await persistSteps(steps);
       }
+
+      // App returned to foreground — detect day change and reconcile with native service
+      if (prevState?.match(/inactive|background/) && nextState === 'active') {
+        await checkDayChange();
+        if (Platform.OS === 'android') {
+          await reconcileWithNative();
+        }
+      }
+
       appStateRef.current = nextState;
     });
 
     return () => {
       if (subscriptionRef.current) subscriptionRef.current.remove();
       if (saveTimerRef.current) clearInterval(saveTimerRef.current);
+      if (reconcileTimerRef.current) clearInterval(reconcileTimerRef.current);
       sub.remove();
     };
   }, []);
@@ -259,6 +439,7 @@ export function useStepTracker() {
     progressAnim,
     pulseAnim,
     goal: profile?.dailyStepGoal || 10000,
-    goalReached: todaySteps >= (profile?.dailyStepGoal || 10000)
+    goalReached: todaySteps >= (profile?.dailyStepGoal || 10000),
+    backgroundServiceActive,
   };
 }
