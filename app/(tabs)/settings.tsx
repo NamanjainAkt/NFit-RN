@@ -31,7 +31,6 @@ export default function SettingsScreen() {
   const [isExporting, setIsExporting] = useState(false);
   const [activityGranted, setActivityGranted] = useState<boolean | null>(null);
   const [notificationsGranted, setNotificationsGranted] = useState<boolean | null>(null);
-  const [backgroundServiceOn, setBackgroundServiceOn] = useState(backgroundTrackingEnabled);
   const [batteryIgnored, setBatteryIgnored] = useState<boolean | null>(null);
 
   const loadPermissions = async () => {
@@ -42,8 +41,6 @@ export default function SettingsScreen() {
 
     if (Platform.OS === 'android' && backgroundStepsModule) {
       try {
-        const running = await backgroundStepsModule.isServiceRunning();
-        setBackgroundServiceOn(running);
         const ignored = await backgroundStepsModule.isIgnoringBatteryOptimizations();
         setBatteryIgnored(ignored);
       } catch {}
@@ -65,15 +62,14 @@ export default function SettingsScreen() {
   const handleBackgroundServiceToggle = async (value: boolean) => {
     if (!backgroundStepsModule) return;
     setBackgroundTrackingEnabled(value);
-    setBackgroundServiceOn(value);
     try {
       if (value) {
         await backgroundStepsModule.startService();
       } else {
         await backgroundStepsModule.stopService();
       }
+      await backgroundStepsModule.setBackgroundTrackingEnabled(value);
     } catch {
-      setBackgroundServiceOn(!value);
       setBackgroundTrackingEnabled(!value);
     }
   };

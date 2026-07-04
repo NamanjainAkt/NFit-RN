@@ -152,13 +152,11 @@ class StepTrackerService : Service(), SensorEventListener {
         if (currentTotal > lastSensorTotal) {
             val delta = (currentTotal - lastSensorTotal).toInt()
 
-            if (delta in 1..50) {
+            if (delta > 0) {
                 accumulatedSteps += delta
-            } else if (delta > 50) {
-                Log.w(TAG, "Large step delta detected: $delta, likely sensor reset")
-                lastSensorTotal = currentTotal
-                persistState(currentTotal)
-                return
+                if (delta > 50) {
+                    Log.d(TAG, "Large step delta: $delta (device may have rebooted)")
+                }
             }
 
             lastSensorTotal = currentTotal
@@ -182,7 +180,7 @@ class StepTrackerService : Service(), SensorEventListener {
             sensorManager.registerListener(
                 this,
                 sensor,
-                SensorManager.SENSOR_DELAY_NORMAL
+                SensorManager.SENSOR_DELAY_UI
             )
             Log.d(TAG, "Sensor registered")
         }
@@ -249,7 +247,7 @@ class StepTrackerService : Service(), SensorEventListener {
             PowerManager.PARTIAL_WAKE_LOCK,
             "Nfit:StepTrackerWakeLock"
         )
-        wakeLock?.acquire(10 * 60 * 1000L)
+        wakeLock?.acquire()
     }
 
     private fun releaseWakeLock() {

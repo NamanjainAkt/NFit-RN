@@ -1,9 +1,10 @@
 package expo.modules.nfitbackgroundsteps
 
-import android.content.Intent
-import android.os.PowerManager
 import android.content.Context
+import android.content.Intent
+import android.content.SharedPreferences
 import android.net.Uri
+import android.os.PowerManager
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 
@@ -70,6 +71,22 @@ class BackgroundStepsModule : Module() {
             context.startActivity(intent)
             null
         }
+
+        AsyncFunction("setBackgroundTrackingEnabled") { enabled: Boolean ->
+            val context = appContext.reactContext ?: return@AsyncFunction
+            val prefs = getPrefs(context)
+            prefs.edit().putBoolean("background_tracking_enabled", enabled).apply()
+        }
+
+        AsyncFunction("isBackgroundTrackingEnabled") {
+            val context = appContext.reactContext ?: return@AsyncFunction true
+            val prefs = getPrefs(context)
+            prefs.getBoolean("background_tracking_enabled", true)
+        }
+    }
+
+    private fun getPrefs(context: Context): SharedPreferences {
+        return context.getSharedPreferences("nfit_background_steps", Context.MODE_PRIVATE)
     }
 
     fun emitStepsUpdate(steps: Int) {

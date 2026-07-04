@@ -363,18 +363,11 @@ export function useStepTracker() {
 
     init();
 
-    // Periodic persist to SQLite every 30 seconds
+    // Periodic persist to SQLite every 30 seconds (reconcile timer handles day-change)
     saveTimerRef.current = setInterval(async () => {
-      await checkDayChange();
-
       const steps = accumulatedRef.current +
         Math.max(0, (maxDeltaRef.current || 0) - (sessionBaseRef.current || 0));
       await persistSteps(steps);
-
-      // Also reconcile with native service every 30 seconds
-      if (Platform.OS === 'android') {
-        await reconcileWithNative();
-      }
     }, 30000);
 
     // Fast reconciliation timer — catches up with native service and detects day changes

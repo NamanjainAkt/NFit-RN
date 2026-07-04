@@ -100,18 +100,18 @@ export const useUserStore = create<UserState>()(
         };
         set((state) => ({ workouts: [...state.workouts, newWorkout] }));
       },
-  resetData: () => set({
-    profile: null,
-    hasCompletedOnboarding: false,
-    stepStreak: 0,
-    lastActiveDate: null,
-    workouts: [],
-    workoutGoals: [],
-    backgroundTrackingEnabled: true,
-  }),
-  removeWorkout: (id) => {
-    set((state) => ({ workouts: state.workouts.filter((w) => w.id !== id) }));
-  },
+      resetData: () => set({
+        profile: null,
+        hasCompletedOnboarding: false,
+        stepStreak: 0,
+        lastActiveDate: null,
+        workouts: [],
+        workoutGoals: [],
+        backgroundTrackingEnabled: true,
+      }),
+      removeWorkout: (id) => {
+        set((state) => ({ workouts: state.workouts.filter((w) => w.id !== id) }));
+      },
       getWorkouts: () => {
         return get().workouts;
       },

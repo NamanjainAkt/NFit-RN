@@ -1,7 +1,8 @@
-import { NativeModule, requireNativeModule } from 'expo';
+import { requireNativeModule } from 'expo';
+import type { NativeModule } from 'expo';
 
-declare class NfitWidgetModule extends NativeModule {
+export interface NfitWidgetModuleNative extends NativeModule {
   updateWidget(steps: number, goal: number): Promise<void>;
 }
 
-export default requireNativeModule('NfitWidgetModule');
+export default requireNativeModule('NfitWidgetModule') as NfitWidgetModuleNative;

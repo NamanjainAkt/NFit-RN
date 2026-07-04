@@ -9,7 +9,7 @@ import { useStepTracker } from '../../hooks/useStepTracker';
 import { useFitnessStats } from '../../hooks/useFitnessStats';
 import { getColors } from '../../utils/theme';
 import { format } from 'date-fns';
-import { requestNotificationPermissions, scheduleDailyReminder } from '../../utils/notifications';
+import { requestNotificationPermissions, scheduleDailyReminder, cancelAllNotifications } from '../../utils/notifications';
 
 const { width } = Dimensions.get('window');
 
@@ -46,7 +46,7 @@ export default function HomeScreen() {
 
   useEffect(() => {
     requestNotificationPermissions();
-    scheduleDailyReminder(20, 0);
+    cancelAllNotifications().then(() => scheduleDailyReminder(20, 0));
   }, []);
 
   if (!stats) return null;

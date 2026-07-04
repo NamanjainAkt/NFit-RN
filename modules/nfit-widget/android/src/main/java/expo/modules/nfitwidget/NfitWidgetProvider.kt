@@ -10,8 +10,10 @@ import java.text.NumberFormat
 class NfitWidgetProvider : AppWidgetProvider() {
 
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
+        val prefs = context.getSharedPreferences("nfit_background_steps", Context.MODE_PRIVATE)
+        val savedSteps = prefs.getInt("accumulated_steps", 0)
         for (appWidgetId in appWidgetIds) {
-            buildAndUpdate(context, appWidgetManager, appWidgetId, 0, 10000)
+            buildAndUpdate(context, appWidgetManager, appWidgetId, savedSteps, 10000)
         }
     }
 

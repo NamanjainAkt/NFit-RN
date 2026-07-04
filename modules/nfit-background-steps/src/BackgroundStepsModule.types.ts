@@ -8,6 +8,8 @@ export interface BackgroundStepsModuleNative extends NativeModule {
   resetForNewDay(): Promise<void>;
   isIgnoringBatteryOptimizations(): Promise<boolean>;
   requestIgnoreBatteryOptimizations(): Promise<void>;
+  setBackgroundTrackingEnabled(enabled: boolean): Promise<void>;
+  isBackgroundTrackingEnabled(): Promise<boolean>;
 }
 
 export type StepsUpdateEvent = {
