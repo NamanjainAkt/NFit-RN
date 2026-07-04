@@ -2,7 +2,7 @@
   "expo": {
     "name": "Nfit",
     "slug": "Nfit",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -27,6 +27,10 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "package": "com.nfit.app",
+      "versionCode": 2,
+      "compileSdkVersion": 35,
+      "targetSdkVersion": 35,
+      "minSdkVersion": 26,
       "permissions": [
         "android.permission.ACTIVITY_RECOGNITION",
         "android.permission.BODY_SENSORS",
@@ -37,7 +41,7 @@
         "android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS",
         "android.permission.FOREGROUND_SERVICE",
         "android.permission.FOREGROUND_SERVICE_HEALTH"
-      ],
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -52,6 +56,13 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "d330709f-3ffd-45dc-a471-a71a8db172e6"
+      }
+    },
+    "owner": "namanjainakt"
   }
 }

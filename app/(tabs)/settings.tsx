@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, TextInput, Alert, ActivityIndicator, Linking, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, TextInput, Alert, ActivityIndicator, Linking, Platform, AppState } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { requireNativeModule } from 'expo';
@@ -25,11 +25,14 @@ export default function SettingsScreen() {
   const updateProfile = useUserStore((state) => state.updateProfile);
   const setHasCompletedOnboarding = useUserStore((state) => state.setHasCompletedOnboarding);
   const stepHistory = useFitnessStore((state) => state.stepHistory);
+  const backgroundTrackingEnabled = useUserStore((state) => state.backgroundTrackingEnabled ?? true);
+  const setBackgroundTrackingEnabled = useUserStore((state) => state.setBackgroundTrackingEnabled);
   
   const [isExporting, setIsExporting] = useState(false);
   const [activityGranted, setActivityGranted] = useState<boolean | null>(null);
   const [notificationsGranted, setNotificationsGranted] = useState<boolean | null>(null);
-  const [backgroundServiceOn, setBackgroundServiceOn] = useState(false);
+  const [backgroundServiceOn, setBackgroundServiceOn] = useState(backgroundTrackingEnabled);
+  const [batteryIgnored, setBatteryIgnored] = useState<boolean | null>(null);
 
   const loadPermissions = async () => {
     const act = await checkActivityPermission();
@@ -41,16 +44,27 @@ export default function SettingsScreen() {
       try {
         const running = await backgroundStepsModule.isServiceRunning();
         setBackgroundServiceOn(running);
+        const ignored = await backgroundStepsModule.isIgnoringBatteryOptimizations();
+        setBatteryIgnored(ignored);
       } catch {}
     }
   };
 
   useEffect(() => {
     loadPermissions();
+
+    // Auto-refresh permission status when user returns to app from system settings
+    const sub = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active') {
+        loadPermissions();
+      }
+    });
+    return () => sub.remove();
   }, []);
 
   const handleBackgroundServiceToggle = async (value: boolean) => {
     if (!backgroundStepsModule) return;
+    setBackgroundTrackingEnabled(value);
     setBackgroundServiceOn(value);
     try {
       if (value) {
@@ -60,6 +74,7 @@ export default function SettingsScreen() {
       }
     } catch {
       setBackgroundServiceOn(!value);
+      setBackgroundTrackingEnabled(!value);
     }
   };
 
@@ -93,13 +108,33 @@ export default function SettingsScreen() {
     }
   };
 
-  const handleConfigureBattery = () => {
-    if (Platform.OS === 'android') {
-      Linking.openSettings();
+  const handleConfigureBattery = async () => {
+    if (Platform.OS === 'android' && backgroundStepsModule) {
+      try {
+        const isIgnored = await backgroundStepsModule.isIgnoringBatteryOptimizations();
+        if (isIgnored) {
+          Alert.alert('Unrestricted', 'Nfit is already configured to run unrestricted in the background.');
+          return;
+        }
+      } catch {}
+
       Alert.alert(
-        'Configure Background Battery',
-        'Please go to "Battery" or "Battery usage" in Settings, and choose "Unrestricted" for Nfit to prevent step tracking from stopping in the background.',
-        [{ text: 'OK' }]
+        'Battery Optimization',
+        'Nfit requires unrestricted background execution to track steps reliably when the app is closed or the screen is turned off. Would you like to grant permission?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Configure',
+            onPress: async () => {
+              try {
+                await backgroundStepsModule.requestIgnoreBatteryOptimizations();
+                setTimeout(loadPermissions, 1500);
+              } catch {
+                Linking.openSettings();
+              }
+            }
+          }
+        ]
       );
     }
   };
@@ -408,10 +443,18 @@ export default function SettingsScreen() {
                 </View>
               </View>
               <TouchableOpacity 
-                style={[styles.permissionBtn, { backgroundColor: c.border }]} 
+                style={[
+                  styles.permissionBtn, 
+                  { backgroundColor: batteryIgnored ? 'rgba(76, 175, 80, 0.15)' : c.border }
+                ]} 
                 onPress={handleConfigureBattery}
               >
-                <Text style={[styles.permissionBtnText, { color: c.text }]}>Configure</Text>
+                <Text style={[
+                  styles.permissionBtnText, 
+                  { color: batteryIgnored ? c.success : c.text }
+                ]}>
+                  {batteryIgnored === null ? 'Loading...' : batteryIgnored ? 'Unrestricted' : 'Configure'}
+                </Text>
               </TouchableOpacity>
             </View>
           )}
@@ -427,7 +470,7 @@ export default function SettingsScreen() {
                 </View>
               </View>
               <Switch
-                value={backgroundServiceOn}
+                value={backgroundTrackingEnabled}
                 onValueChange={handleBackgroundServiceToggle}
                 trackColor={{ false: c.border, true: c.secondary }}
                 thumbColor={c.primary}

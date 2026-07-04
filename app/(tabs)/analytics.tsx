@@ -1,12 +1,12 @@
-import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, Dimensions, ScrollView, TouchableOpacity, TextInput } from 'react-native';
+import React, { useState, useMemo, useEffect } from 'react';
+import { View, Text, StyleSheet, Dimensions, ScrollView, TouchableOpacity, TextInput, AppState } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useUserStore } from '../../store/userStore';
 import { useFitnessStore } from '../../store/fitnessStore';
 import { getColors } from '../../utils/theme';
 import { calculateCalories } from '../../utils/calculations';
-import { format, subDays, startOfMonth, endOfMonth, getDay, getDaysInMonth } from 'date-fns';
+import { format, subDays, startOfMonth, endOfMonth, getDay, getDaysInMonth, parseISO } from 'date-fns';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CHART_PADDED = SCREEN_WIDTH - 40;
@@ -36,6 +36,14 @@ export default function AnalyticsScreen() {
   const [rangePreset, setRangePreset] = useState<RangePreset>('30d');
   const [customStart, setCustomStart] = useState('');
   const [customEnd, setCustomEnd] = useState('');
+  const [todayLabel, setTodayLabel] = useState(() => format(new Date(), 'EEEE, MMMM d'));
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') setTodayLabel(format(new Date(), 'EEEE, MMMM d'));
+    });
+    return () => sub.remove();
+  }, []);
 
   const insets = useSafeAreaInsets();
   const darkMode = profile?.darkMode ?? false;
@@ -50,8 +58,10 @@ export default function AnalyticsScreen() {
       case '30d': start = subDays(end, 29); break;
       case '90d': start = subDays(end, 89); break;
       case 'custom': {
-        const parsedStart = new Date(customStart);
-        const parsedEnd = new Date(customEnd);
+        // parseISO treats 'yyyy-MM-dd' as local midnight — correct for any timezone.
+        // new Date('yyyy-MM-dd') would parse as UTC midnight, off by hours for western users.
+        const parsedStart = parseISO(customStart);
+        const parsedEnd = parseISO(customEnd);
         const validStart = !isNaN(parsedStart.getTime()) ? parsedStart : end;
         const validEnd = !isNaN(parsedEnd.getTime()) ? parsedEnd : end;
         const days = Math.round((validEnd.getTime() - validStart.getTime()) / 86400000) + 1;
@@ -227,7 +237,7 @@ export default function AnalyticsScreen() {
                   </Text>
                 </View>
               </View>
-              <Text style={[styles.goalToday, { color: c.textSecondary }]}>{format(new Date(), 'EEEE, MMMM d')}</Text>
+              <Text style={[styles.goalToday, { color: c.textSecondary }]}>{todayLabel}</Text>
             </View>
             <View style={[styles.goalStatsRow, { borderTopColor: c.border }]}>
               {[
@@ -257,7 +267,7 @@ export default function AnalyticsScreen() {
                   return (
                     <View key={d.date} style={styles.barCol}>
                       <View style={[styles.bar, { height: barH, backgroundColor: d.steps >= goal ? c.success : c.text }]} />
-                      {showLabel && <Text style={[styles.barLbl, { color: c.textTertiary }]}>{format(new Date(d.date), 'd/M')}</Text>}
+                      {showLabel && <Text style={[styles.barLbl, { color: c.textTertiary }]}>{format(parseISO(d.date), 'd/M')}</Text>}
                     </View>
                   );
                 })}

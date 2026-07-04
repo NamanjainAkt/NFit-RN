@@ -1,5 +1,5 @@
 import * as FileSystem from 'expo-file-system/legacy';
-import Sharing from 'expo-sharing';
+import * as Sharing from 'expo-sharing';
 import { DailySteps } from '../store/fitnessStore';
 import { Workout } from '../store/userStore';
 

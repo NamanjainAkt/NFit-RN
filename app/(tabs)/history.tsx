@@ -6,7 +6,7 @@ import { useUserStore } from '../../store/userStore';
 import { useFitnessStore, DailySteps } from '../../store/fitnessStore';
 import { calculateCalories } from '../../utils/calculations';
 import { getColors } from '../../utils/theme';
-import { format, getDay, startOfMonth, endOfMonth, subDays, startOfYear } from 'date-fns';
+import { format, getDay, startOfMonth, endOfMonth, subDays, startOfYear, parseISO } from 'date-fns';
 
 const { width } = Dimensions.get('window');
 const barWidth = (width - 80) / 7;
@@ -46,7 +46,7 @@ export default function HistoryScreen() {
     const calories = profile ? calculateCalories(totalSteps, profile.weight, profile.useMetric) : 0;
     const goalPercent = Math.round((avgSteps / goal) * 100);
     const bestDay = weekData.reduce((best, d) => d.steps > best.steps ? d : best, weekData[0]);
-    const bestDayName = days[getDay(new Date(bestDay.date))];
+    const bestDayName = days[getDay(parseISO(bestDay.date))];
 
     const weekStart = format(subDays(new Date(), 6), 'yyyy-MM-dd');
     const weekWorkouts = workouts.filter((w) => w.date >= weekStart && w.date <= today);
@@ -72,7 +72,7 @@ export default function HistoryScreen() {
           <View style={styles.chart}>
             {weekData.map((day) => {
               const height = (day.steps / maxSteps) * 150;
-              const dayName = days[getDay(new Date(day.date))];
+              const dayName = days[getDay(parseISO(day.date))];
               const reachedGoal = day.steps >= goal;
               return (
                 <View key={day.date} style={styles.barContainer}>

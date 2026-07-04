@@ -21,6 +21,7 @@ export function useStepTracker() {
   const stepStreak = useUserStore((state) => state.stepStreak);
   const updateStepStreak = useUserStore((state) => state.updateStepStreak);
   const setStepHistory = useFitnessStore((state) => state.setStepHistory);
+  const backgroundTrackingEnabled = useUserStore((state) => state.backgroundTrackingEnabled ?? true);
 
   const {
     todaySteps,
@@ -43,7 +44,7 @@ export function useStepTracker() {
   const lastEventTimeRef = useRef(0);
   const subscriptionRef = useRef<{ remove: () => void } | null>(null);
   const shakeCooldownRef = useRef(0);
-  const lastSensorStepsRef = useRef(0);
+  const lastSensorStepsRef = useRef(-1);
   const stepRateWindowRef = useRef<{ increment: number; time: number }[]>([]);
   const saveTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const reconcileTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -51,6 +52,8 @@ export function useStepTracker() {
   const widgetModuleRef = useRef<any>(null);
   const currentDateRef = useRef(format(new Date(), 'yyyy-MM-dd'));
   const isResettingDayRef = useRef(false);
+  // Ref to startWatching so checkDayChange can call it without a circular dep
+  const startWatchingRef = useRef<() => Promise<void>>(async () => {});
 
   const syncWidget = useCallback(async (steps: number, goal: number) => {
     if (Platform.OS !== 'android') return;
@@ -65,13 +68,14 @@ export function useStepTracker() {
   const persistSteps = useCallback(async (steps: number) => {
     await saveStepCounterState(steps);
     const today = format(new Date(), 'yyyy-MM-dd');
+    const currentProfile = profileRef.current;
     await saveDailySteps({
       date: today,
       steps,
       floors: Math.floor(steps / 200),
       activeMinutes: Math.floor(steps / 100),
-      calories: 0,
-      distance: 0,
+      calories: currentProfile ? calculateCalories(steps, currentProfile.weight, currentProfile.useMetric) : 0,
+      distance: currentProfile ? calculateDistance(steps, currentProfile.height, currentProfile.useMetric) : 0,
     });
   }, []);
 
@@ -148,7 +152,9 @@ export function useStepTracker() {
       accumulatedRef.current = 0;
       sessionBaseRef.current = 0;
       maxDeltaRef.current = 0;
-      lastSensorStepsRef.current = 0;
+      // Set to -1 so the first post-reset sensor event is treated as the new base
+      // rather than causing a huge sensorIncrement that trips the spike filter.
+      lastSensorStepsRef.current = -1;
       lastEventTimeRef.current = 0;
       currentDateRef.current = today;
       setGoalNotified(false);
@@ -172,6 +178,13 @@ export function useStepTracker() {
       if (currentProfile) {
         syncWidget(0, currentProfile.dailyStepGoal || 10000);
       }
+
+      // Restart the sensor watcher so sessionBaseRef re-anchors to today's hardware counter
+      if (subscriptionRef.current) {
+        subscriptionRef.current.remove();
+        subscriptionRef.current = null;
+      }
+      await startWatchingRef.current();
 
       loadAllDailySteps().then(setStepHistory);
     } finally {
@@ -217,10 +230,13 @@ export function useStepTracker() {
       sessionBaseRef.current = delta;
     }
 
-    const sensorIncrement = lastSensorStepsRef.current === 0 ? 0 : delta - lastSensorStepsRef.current;
+    // lastSensorStepsRef === -1 means this is the first event after a day reset.
+    // Skip sensorIncrement calculation to avoid tripping the spike filter.
+    const isFirstAfterReset = lastSensorStepsRef.current === -1;
+    const sensorIncrement = isFirstAfterReset ? 0 : delta - lastSensorStepsRef.current;
     lastSensorStepsRef.current = delta;
 
-    if (sensorIncrement > 15) {
+    if (!isFirstAfterReset && sensorIncrement > 15) {
       enterCooldown();
       return;
     }
@@ -270,6 +286,9 @@ export function useStepTracker() {
     }
   }, [handleWatchUpdate]);
 
+  // Keep the ref in sync so checkDayChange always calls the latest version
+  startWatchingRef.current = startWatching;
+
   useEffect(() => {
     const init = async () => {
       const state = await loadStepCounterState();
@@ -277,7 +296,13 @@ export function useStepTracker() {
 
       // Start the native background service so steps are tracked even when app is in background
       if (Platform.OS === 'android') {
-        await startBackgroundService();
+        if (backgroundTrackingEnabled) {
+          await startBackgroundService();
+        } else {
+          try {
+            await backgroundStepsModule.stopService();
+          } catch {}
+        }
 
         // Read native accumulated steps — this catches steps tracked while app was killed
         const nativeSteps = await getNativeAccumulatedSteps();

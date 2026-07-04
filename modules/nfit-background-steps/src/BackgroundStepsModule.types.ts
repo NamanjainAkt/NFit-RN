@@ -6,6 +6,8 @@ export interface BackgroundStepsModuleNative extends NativeModule {
   getAccumulatedSteps(): Promise<number>;
   isServiceRunning(): Promise<boolean>;
   resetForNewDay(): Promise<void>;
+  isIgnoringBatteryOptimizations(): Promise<boolean>;
+  requestIgnoreBatteryOptimizations(): Promise<void>;
 }
 
 export type StepsUpdateEvent = {

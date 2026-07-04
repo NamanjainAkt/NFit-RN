@@ -48,6 +48,8 @@ interface UserState {
   getWorkouts: () => Workout[];
   getWorkoutsForWeek: () => Workout[];
   setWorkoutGoal: (goal: WorkoutGoal) => void;
+  backgroundTrackingEnabled: boolean;
+  setBackgroundTrackingEnabled: (value: boolean) => void;
 }
 
 export const useUserStore = create<UserState>()(
@@ -59,8 +61,10 @@ export const useUserStore = create<UserState>()(
       lastActiveDate: null,
       workouts: [],
       workoutGoals: [],
+      backgroundTrackingEnabled: true,
       setProfile: (profile) => set({ profile, hasCompletedOnboarding: true }),
       setHasCompletedOnboarding: (value) => set({ hasCompletedOnboarding: value }),
+      setBackgroundTrackingEnabled: (value) => set({ backgroundTrackingEnabled: value }),
       updateStepStreak: (today) => {
         const { lastActiveDate, stepStreak } = get();
         const todayDate = parseISO(today);
@@ -103,6 +107,7 @@ export const useUserStore = create<UserState>()(
     lastActiveDate: null,
     workouts: [],
     workoutGoals: [],
+    backgroundTrackingEnabled: true,
   }),
   removeWorkout: (id) => {
     set((state) => ({ workouts: state.workouts.filter((w) => w.id !== id) }));
@@ -112,10 +117,10 @@ export const useUserStore = create<UserState>()(
       },
       getWorkoutsForWeek: () => {
         const { workouts } = get();
-        const today = new Date();
-        const weekAgo = new Date(today);
-        weekAgo.setDate(weekAgo.getDate() - 7);
-        return workouts.filter((w) => new Date(w.date) >= weekAgo);
+        // Use string comparison on yyyy-MM-dd — lexicographically correct and
+        // timezone-safe for any user in the world (avoids UTC-parse of date strings).
+        const weekAgoStr = format(subDays(new Date(), 7), 'yyyy-MM-dd');
+        return workouts.filter((w) => w.date >= weekAgoStr);
       },
       setWorkoutGoal: (goal) => {
         set((state) => ({

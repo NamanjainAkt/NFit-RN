@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Dimensions, Animated } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, Animated, AppState } from 'react-native';
 import Confetti from '../../components/Confetti';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -21,6 +21,17 @@ export default function HomeScreen() {
   const stats = useFitnessStats();
   const [confettiKey, setConfettiKey] = useState(0);
   const prevGoalRef = useRef(false);
+  const [todayLabel, setTodayLabel] = useState(() => format(new Date(), 'EEEE, MMMM d'));
+
+  // Refresh the date whenever the app comes back to the foreground
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        setTodayLabel(format(new Date(), 'EEEE, MMMM d'));
+      }
+    });
+    return () => sub.remove();
+  }, []);
 
   useEffect(() => {
     if (stats?.goalReached && !prevGoalRef.current) {
@@ -51,7 +62,7 @@ export default function HomeScreen() {
     <View style={[styles.container, { backgroundColor: c.background, paddingTop: insets.top + 20 }]}>
       <View style={styles.header}>
         <Text style={[styles.greeting, { color: c.text }]}>Hello, {profile.name}</Text>
-        <Text style={[styles.date, { color: c.textTertiary }]}>{format(new Date(), 'EEEE, MMMM d')}</Text>
+        <Text style={[styles.date, { color: c.textTertiary }]}>{todayLabel}</Text>
       </View>
       <View style={styles.ringContainer}>
         <Animated.View style={[styles.ringWrapper, { transform: [{ scale: pulseAnim }] }]}>

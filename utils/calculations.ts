@@ -4,8 +4,10 @@ export function calculateCalories(steps: number, weight: number, useMetric: bool
 }
 
 export function calculateDistance(steps: number, height: number, useMetric: boolean): number {
-  const stride = height * 0.415;
-  return useMetric
-    ? steps * stride / 100000
-    : steps * stride / 63360;
+  // height is always stored in the user's chosen unit.
+  // Normalize to cm for a consistent stride calculation (stride = height_cm * 0.415 cm).
+  const heightCm = useMetric ? height : height * 2.54;
+  const strideCm = heightCm * 0.415;
+  const distanceM = steps * strideCm / 100;
+  return useMetric ? distanceM / 1000 : distanceM / 1609.344;
 }
