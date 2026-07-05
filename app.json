@@ -2,7 +2,7 @@
   "expo": {
     "name": "Nfit",
     "slug": "Nfit",
-    "version": "1.0.2",
+    "version": "1.2.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -27,7 +27,7 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "package": "com.nfit.app",
-      "versionCode": 3,
+      "versionCode": 4,
       "compileSdkVersion": 35,
       "targetSdkVersion": 35,
       "minSdkVersion": 26,

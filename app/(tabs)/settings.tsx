@@ -494,7 +494,7 @@ export default function SettingsScreen() {
       </View>
 
       <View style={styles.footer}>
-        <Text style={[styles.footerText, { color: c.textTertiary }]}>Nfit v1.0.2</Text>
+        <Text style={[styles.footerText, { color: c.textTertiary }]}>Nfit v1.2.0</Text>
         <Text style={[styles.footerText, { color: c.textTertiary }]}>Sensor-driven fitness</Text>
       </View>
     </ScrollView>
