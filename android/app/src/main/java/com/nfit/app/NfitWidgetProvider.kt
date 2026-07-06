@@ -95,7 +95,7 @@ class NfitWidgetProvider : AppWidgetProvider() {
         if (floorsId != 0) views.setTextViewText(floorsId, "$floors")
         if (activeMinId != 0) views.setTextViewText(activeMinId, "$activeMinutes")
 
-        if (progressBarId != 0 && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        if (progressBarId != 0 && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
           val progressColor = when {
             progress >= 100 -> android.graphics.Color.parseColor("#4CAF50")
             progress >= 75 -> android.graphics.Color.parseColor("#8BC34A")

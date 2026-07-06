@@ -1,5 +1,6 @@
 package expo.modules.nfitwidget
 
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
@@ -63,7 +64,7 @@ class NfitWidgetModule : Module() {
 
   private fun triggerRefresh(context: Context) {
     val intent = Intent(ACTION_REFRESH)
-    intent.setPackage(context.packageName)
+    intent.component = ComponentName(context.packageName, "${context.packageName}.NfitWidgetProvider")
     context.sendBroadcast(intent)
   }
 }

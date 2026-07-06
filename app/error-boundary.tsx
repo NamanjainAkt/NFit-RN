@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 interface Props {
-  children: ReactNode;
+  children?: ReactNode;
 }
 
 interface State {
@@ -95,3 +95,5 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
 });
+
+export default ErrorBoundary;

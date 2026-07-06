@@ -18,6 +18,7 @@ const WORKOUT_TYPES = [
 ];
 
 const DURATION_PRESETS = [15, 30, 45, 60];
+const MAX_DURATION_MINUTES = 999;
 
 export default function WorkoutsScreen() {
   const profile = useUserStore((state) => state.profile);
@@ -40,19 +41,37 @@ export default function WorkoutsScreen() {
   const weekWorkouts = getWorkoutsForWeek();
   const totalCaloriesWeek = weekWorkouts.reduce((sum, w) => sum + w.calories, 0);
   const totalDurationWeek = weekWorkouts.reduce((sum, w) => sum + w.duration, 0);
+  const durationMinutes = Number.parseInt(duration, 10);
+  const hasValidDuration = Number.isFinite(durationMinutes) && durationMinutes > 0;
+
+  const setDurationValue = (value: string) => {
+    const digits = value.replace(/\D/g, '').slice(0, 3);
+    if (!digits) {
+      setDuration('');
+      return;
+    }
+
+    const nextDuration = Math.min(Number.parseInt(digits, 10), MAX_DURATION_MINUTES);
+    setDuration(nextDuration.toString());
+  };
+
+  const adjustDuration = (delta: number) => {
+    const baseDuration = hasValidDuration ? durationMinutes : 0;
+    const nextDuration = Math.min(Math.max(baseDuration + delta, 1), MAX_DURATION_MINUTES);
+    setDuration(nextDuration.toString());
+  };
 
   const handleAddWorkout = () => {
     if (!selectedType) return;
-    const durationNum = parseInt(duration, 10);
-    if (!durationNum || durationNum <= 0) {
+    if (!hasValidDuration) {
       Alert.alert('Invalid Duration', 'Please enter a valid workout duration.');
       return;
     }
 
-    const calories = Math.round(durationNum * selectedType.caloriesPerMin * (profile?.weight ? (profile.useMetric ? profile.weight : profile.weight * 0.453592) / 70 : 1));
+    const calories = Math.round(durationMinutes * selectedType.caloriesPerMin * (profile?.weight ? (profile.useMetric ? profile.weight : profile.weight * 0.453592) / 70 : 1));
     addWorkout({
       type: selectedType.name,
-      duration: durationNum,
+      duration: durationMinutes,
       calories,
       notes: notes || undefined,
     });
@@ -75,13 +94,14 @@ export default function WorkoutsScreen() {
     ]);
   };
 
-  const estimatedCalories = selectedType && duration
-    ? Math.round(parseInt(duration, 10) * selectedType.caloriesPerMin * (profile?.weight ? (profile.useMetric ? profile.weight : profile.weight * 0.453592) / 70 : 1))
+  const estimatedCalories = selectedType && hasValidDuration
+    ? Math.round(durationMinutes * selectedType.caloriesPerMin * (profile?.weight ? (profile.useMetric ? profile.weight : profile.weight * 0.453592) / 70 : 1))
     : 0;
 
   const nextStep = () => setStep((s) => Math.min(s + 1, 3));
   const prevStep = () => setStep((s) => Math.max(s - 1, 1));
   const handleCustomPreset = () => {
+    setDuration('');
     durationInputRef.current?.focus();
   };
 
@@ -163,47 +183,62 @@ export default function WorkoutsScreen() {
         {step === 2 && (
           <View style={styles.stepContent}>
             <Text style={[styles.stepLabel, { color: c.text }]}>How long?</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.presetsScroll}>
-              {DURATION_PRESETS.map((p) => (
-                <TouchableOpacity
-                  key={p}
-                  style={[styles.presetChip, { backgroundColor: parseInt(duration, 10) === p ? c.text : c.surface }]}
-                  onPress={() => setDuration(p.toString())}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[styles.presetChipText, { color: parseInt(duration, 10) === p ? c.background : c.text }]}>{p} min</Text>
-                </TouchableOpacity>
-              ))}
+            <View style={styles.durationPresetGrid}>
+              {DURATION_PRESETS.map((p) => {
+                const selected = durationMinutes === p;
+                return (
+                  <TouchableOpacity
+                    key={p}
+                    style={[styles.presetChip, { backgroundColor: selected ? c.text : c.surface, borderColor: selected ? c.text : c.border }]}
+                    onPress={() => setDuration(p.toString())}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.presetChipText, { color: selected ? c.background : c.text }]}>{p} min</Text>
+                  </TouchableOpacity>
+                );
+              })}
               <TouchableOpacity
-                style={[styles.presetChip, { backgroundColor: duration && !DURATION_PRESETS.includes(parseInt(duration, 10)) ? c.text : c.surface }]}
+                style={[styles.presetChip, { backgroundColor: hasValidDuration && !DURATION_PRESETS.includes(durationMinutes) ? c.text : c.surface, borderColor: hasValidDuration && !DURATION_PRESETS.includes(durationMinutes) ? c.text : c.border }]}
                 onPress={handleCustomPreset}
                 activeOpacity={0.7}
               >
-                <Text style={[styles.presetChipText, { color: duration && !DURATION_PRESETS.includes(parseInt(duration, 10)) ? c.background : c.text }]}>Custom</Text>
+                <Text style={[styles.presetChipText, { color: hasValidDuration && !DURATION_PRESETS.includes(durationMinutes) ? c.background : c.text }]}>Custom</Text>
               </TouchableOpacity>
-            </ScrollView>
-            <View style={styles.durationInputRow}>
-              <TextInput
-                ref={durationInputRef}
-                style={[styles.durationInput, { backgroundColor: c.surface, borderColor: c.border, color: c.text }]}
-                value={duration}
-                onChangeText={setDuration}
-                keyboardType="numeric"
-                placeholder="Custom"
-                placeholderTextColor={c.textTertiary}
-              />
-              <Text style={[styles.durationUnit, { color: c.textTertiary }]}>minutes</Text>
             </View>
+
+            <View style={[styles.durationPicker, { backgroundColor: c.surface, borderColor: c.border }]}> 
+              <TouchableOpacity style={[styles.durationStepper, { borderColor: c.border }]} onPress={() => adjustDuration(-5)} activeOpacity={0.7}>
+                <MaterialIcons name="remove" size={24} color={c.text} />
+              </TouchableOpacity>
+              <View style={styles.durationInputWrap}>
+                <TextInput
+                  ref={durationInputRef}
+                  style={[styles.durationInput, { color: c.text }]}
+                  value={duration}
+                  onChangeText={setDurationValue}
+                  keyboardType="number-pad"
+                  placeholder="0"
+                  placeholderTextColor={c.textTertiary}
+                  maxLength={3}
+                  textAlign="center"
+                />
+                <Text style={[styles.durationUnit, { color: c.textTertiary }]}>minutes</Text>
+              </View>
+              <TouchableOpacity style={[styles.durationStepper, { borderColor: c.border }]} onPress={() => adjustDuration(5)} activeOpacity={0.7}>
+                <MaterialIcons name="add" size={24} color={c.text} />
+              </TouchableOpacity>
+            </View>
+
             <View style={styles.wizardButtonRow}>
-              <TouchableOpacity style={[styles.wizardButtonSecondary]} onPress={prevStep}>
+              <TouchableOpacity style={[styles.wizardButtonSecondary, { borderColor: c.border }]} onPress={prevStep}>
                 <Text style={[styles.wizardButtonText, { color: c.text }]}>Back</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.wizardButton, { backgroundColor: duration && parseInt(duration, 10) > 0 ? c.text : c.border, flex: 2 }]}
+                style={[styles.wizardButton, { backgroundColor: hasValidDuration ? c.text : c.border, flex: 2 }]}
                 onPress={nextStep}
-                disabled={!duration || parseInt(duration, 10) <= 0}
+                disabled={!hasValidDuration}
               >
-                <Text style={[styles.wizardButtonText, { color: duration && parseInt(duration, 10) > 0 ? c.background : c.textTertiary }]}>Next</Text>
+                <Text style={[styles.wizardButtonText, { color: hasValidDuration ? c.background : c.textTertiary }]}>Next</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -368,13 +403,17 @@ const styles = StyleSheet.create({
   typeName: { fontSize: 13, fontWeight: '600', marginTop: 8, textAlign: 'center' },
 
   // Presets
+  durationPresetGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 20 },
   presetsScroll: { marginBottom: 12 },
   presetsRow: { flexDirection: 'row', gap: 12 },
-  presetChip: { paddingVertical: 14, paddingHorizontal: 24, borderRadius: 12 },
+  presetChip: { minWidth: '30%', flexGrow: 1, paddingVertical: 13, paddingHorizontal: 14, borderRadius: 12, borderWidth: 1, alignItems: 'center' },
   presetChipText: { fontSize: 14, fontWeight: '600' },
   durationInputRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 24, marginTop: 12 },
-  durationInput: { borderRadius: 12, padding: 16, fontSize: 18, borderWidth: 1, flex: 1 },
-  durationUnit: { fontSize: 16, marginLeft: 12, fontWeight: '500' },
+  durationPicker: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 16, padding: 12, marginBottom: 24 },
+  durationStepper: { width: 48, height: 48, borderRadius: 24, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  durationInputWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12 },
+  durationInput: { minWidth: 96, paddingVertical: 2, paddingHorizontal: 8, fontSize: 40, fontWeight: '700' },
+  durationUnit: { fontSize: 13, marginTop: 2, fontWeight: '600', textTransform: 'uppercase' },
 
   // Buttons
   wizardButtonRow: { flexDirection: 'row', gap: 12, marginTop: 'auto', paddingTop: 20 },

@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import { requireNativeModule } from 'expo';
 import { useFitnessStore } from '../store/fitnessStore';
 import { useUserStore } from '../store/userStore';
 import { calculateCalories, calculateDistance } from './calculations';
@@ -10,9 +11,13 @@ let NfitBackgroundSteps: any = null;
 function getWidgetModule() {
   if (!NfitWidget) {
     try {
-      NfitWidget = require('expo-modules-core').NativeModulesProxy.NfitWidget;
+      NfitWidget = requireNativeModule('NfitWidget');
     } catch {
-      NfitWidget = null;
+      try {
+        NfitWidget = require('expo-modules-core').NativeModulesProxy.NfitWidget;
+      } catch {
+        NfitWidget = null;
+      }
     }
   }
   return NfitWidget;

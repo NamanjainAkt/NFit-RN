@@ -26,7 +26,7 @@ export default function OnboardingScreen() {
       try {
         return await PermissionsAndroid.request(
           PermissionsAndroid.PERMISSIONS.ACTIVITY_RECOGNITION,
-          { title: 'Step Tracking', message: 'Nfit needs to track your physical activity for step counting.' }
+          { title: 'Step Tracking', message: 'Nfit needs to track your physical activity for step counting.', buttonPositive: 'Allow' }
         );
       } catch {
         return PermissionsAndroid.RESULTS.DENIED;

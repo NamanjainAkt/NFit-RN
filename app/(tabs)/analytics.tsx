@@ -374,7 +374,7 @@ export default function AnalyticsScreen() {
                 <Text key={d} style={[styles.calDayHdr, { color: c.textTertiary }]}>{d[0]}</Text>
               ))}
               {Array.from({ length: monthData.firstDay }).map((_, i) => (
-                <View key={`e-${i}`} style={styles.calCell} />
+                <View key={`e-${i}`} style={styles.calCellSlot} />
               ))}
               {monthData.days.map((day) => {
                 const int = day.steps > 0 ? Math.min(day.steps / goal, 1) : 0;
@@ -384,16 +384,23 @@ export default function AnalyticsScreen() {
                 return (
                   <TouchableOpacity
                     key={day.date}
-                    style={[
-                      styles.calCell,
-                      { backgroundColor: colorVal + Math.round(alpha * 255).toString(16).padStart(2, '0') },
-                      isToday && { borderWidth: 1, borderColor: c.text },
-                    ]}
+                    style={styles.calCellSlot}
                     activeOpacity={0.6}
                   >
-                    <Text style={[styles.calDayNum, { color: int > 0.5 ? '#FFFFFF' : c.text }]}>
-                      {day.dayNum}
-                    </Text>
+                    <View
+                      style={[
+                        styles.calCell,
+                        {
+                          backgroundColor: colorVal + Math.round(alpha * 255).toString(16).padStart(2, '0'),
+                          borderColor: isToday ? c.text : c.border,
+                          borderWidth: isToday ? 2 : 1,
+                        },
+                      ]}
+                    >
+                      <Text style={[styles.calDayNum, { color: int > 0.5 ? '#FFFFFF' : c.text }]}>
+                        {day.dayNum}
+                      </Text>
+                    </View>
                   </TouchableOpacity>
                 );
               })}
@@ -481,11 +488,12 @@ const styles = StyleSheet.create({
   pieDur: { fontSize: 12, width: 50, textAlign: 'right' },
 
   calMonth: { fontSize: 14, fontWeight: '600', marginBottom: 12, textAlign: 'center' },
-  calGrid: { flexDirection: 'row', flexWrap: 'wrap' },
-  calDayHdr: { width: `${100 / 7}%`, textAlign: 'center', fontSize: 11, fontWeight: '600', marginBottom: 4 },
-  calCell: { width: `${100 / 7}%`, aspectRatio: 1, alignItems: 'center', justifyContent: 'center', borderRadius: 4, padding: 1 },
-  calDayNum: { fontSize: 10, fontWeight: '600', textAlign: 'center', lineHeight: 12 },
-  calLegend: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, marginTop: 12 },
-  calLegBox: { width: 14, height: 14, borderRadius: 3 },
+  calGrid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 8 },
+  calDayHdr: { width: `${100 / 7}%`, textAlign: 'center', fontSize: 11, fontWeight: '600', marginBottom: 6 },
+  calCellSlot: { width: `${100 / 7}%`, height: 36, alignItems: 'center', justifyContent: 'center' },
+  calCell: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  calDayNum: { fontSize: 11, fontWeight: '700', textAlign: 'center', lineHeight: 14, includeFontPadding: false },
+  calLegend: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, marginTop: 14 },
+  calLegBox: { width: 14, height: 14, borderRadius: 7 },
   calLegText: { fontSize: 10, marginHorizontal: 4 },
 });
