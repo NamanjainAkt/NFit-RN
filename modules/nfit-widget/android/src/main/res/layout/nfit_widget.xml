@@ -51,7 +51,8 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center"
-            android:padding="6dp 12dp"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="6dp"
             android:background="@drawable/badge_streak">
 
             <TextView
