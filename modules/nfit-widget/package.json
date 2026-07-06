@@ -1,0 +1,6 @@
+{
+  "name": "nfit-widget",
+  "version": "1.0.0",
+  "main": "src/NfitWidgetModule.ts",
+  "react-native": "src/NfitWidgetModule.ts"
+}

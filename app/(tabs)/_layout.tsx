@@ -1,11 +1,13 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useUserStore } from '../../store/userStore';
 import { getColors } from '../../utils/theme';
 
 export default function TabsLayout() {
   const darkMode = useUserStore((state) => state.profile?.darkMode ?? false);
   const c = getColors(darkMode);
+  const insets = useSafeAreaInsets();
 
   return (
     <Tabs
@@ -15,8 +17,8 @@ export default function TabsLayout() {
           backgroundColor: c.surface,
           borderTopWidth: 1,
           borderTopColor: c.border,
-          height: 60,
-          paddingBottom: 8,
+          height: 60 + insets.bottom,
+          paddingBottom: insets.bottom,
           paddingTop: 8,
         },
         tabBarActiveTintColor: c.accent,

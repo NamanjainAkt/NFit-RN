@@ -44,8 +44,9 @@ tmp-export-test/
 /ios
 /android
 
-# native module build artifacts
-modules/*/android/build/
+# Android / Gradle build artifacts
+**/build/
+.gradle/
 
 # OpenCode config
 .commandcode/

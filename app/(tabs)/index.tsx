@@ -1,5 +1,6 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Dimensions, Animated, TouchableOpacity } from 'react-native';
+import Confetti from '../../components/Confetti';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -14,7 +15,6 @@ const { width } = Dimensions.get('window');
 const RING_SIZE = width * 0.6;
 const STROKE_WIDTH = 14;
 const RADIUS = (RING_SIZE - STROKE_WIDTH) / 2;
-const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -24,6 +24,16 @@ export default function HomeScreen() {
   const stats = useFitnessStats();
 
   const ringProgress = useRef(new Animated.Value(0)).current;
+
+  const [confettiKey, setConfettiKey] = useState(0);
+  const prevGoalRef = useRef(false);
+
+  useEffect(() => {
+    if (stats?.goalReached && !prevGoalRef.current) {
+      setConfettiKey((k) => k + 1);
+    }
+    if (stats) prevGoalRef.current = stats.goalReached;
+  }, [stats?.goalReached]);
 
   useEffect(() => {
     if (!hasCompletedOnboarding) router.replace('/onboarding');
@@ -52,11 +62,6 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const darkMode = profile?.darkMode ?? false;
   const c = getColors(darkMode);
-
-  const ringDashoffset = ringProgress.interpolate({
-    inputRange: [0, 1],
-    outputRange: [CIRCUMFERENCE, 0],
-  });
 
   return (
     <View style={[styles.container, { backgroundColor: c.background, paddingTop: insets.top + 20 }]}>
@@ -160,6 +165,7 @@ export default function HomeScreen() {
           <Text style={[styles.warningText, { color: c.warning }]}>Demo mode - steps simulated</Text>
         </View>
       )}
+      {confettiKey > 0 && <Confetti key={confettiKey} />}
     </View>
   );
 }
