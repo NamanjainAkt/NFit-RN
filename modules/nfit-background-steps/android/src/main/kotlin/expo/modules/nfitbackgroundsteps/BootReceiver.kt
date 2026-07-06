@@ -8,12 +8,16 @@ import android.util.Log
 class BootReceiver : BroadcastReceiver() {
   override fun onReceive(context: Context, intent: Intent) {
     if (intent.action == Intent.ACTION_BOOT_COMPLETED) {
-      Log.d("BootReceiver", "Boot completed, restarting step tracker")
+      Log.d("BootReceiver", "Boot completed, rescheduling WorkManager")
 
       val prefs = context.getSharedPreferences(
         StepTrackerService.PREFS_NAME, Context.MODE_PRIVATE
       )
 
+      // Always reschedule periodic work after boot
+      StepTrackerWorker.enqueuePeriodicWork(context)
+
+      // If service was running before reboot, restart it
       if (prefs.getBoolean(StepTrackerService.KEY_SERVICE_RUNNING, false)) {
         val serviceIntent = Intent(context, StepTrackerService::class.java)
         context.startForegroundService(serviceIntent)

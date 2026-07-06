@@ -8,6 +8,7 @@
     android:minResizeHeight="120dp"
     android:updatePeriodMillis="0"
     android:initialLayout="@layout/nfit_widget"
+    android:previewLayout="@layout/nfit_widget"
     android:description="@string/widget_description"
     android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen" />

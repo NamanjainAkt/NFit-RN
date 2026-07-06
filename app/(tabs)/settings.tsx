@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, TextInput, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, TextInput, Alert, ActivityIndicator, Platform, Linking } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useUserStore } from '../../store/userStore';
@@ -84,6 +84,12 @@ export default function SettingsScreen() {
       { text: 'Cancel', style: 'cancel' },
       { text: 'Reset', style: 'destructive', onPress: () => { setHasCompletedOnboarding(false); router.replace('/onboarding'); } },
     ]);
+  };
+
+  const openBatterySettings = () => {
+    if (Platform.OS === 'android') {
+      Linking.openSettings();
+    }
   };
 
   const handleExportData = () => {
@@ -258,6 +264,24 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </View>
 
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: c.textTertiary }]}>Background Service</Text>
+          <View style={[styles.card, { backgroundColor: c.surface }]}>
+            <View style={[styles.infoRow, { borderBottomColor: c.border }]}>
+              <Text style={[styles.infoText, { color: c.textSecondary }]}>
+                For reliable step tracking in the background, disable battery optimization for Nfit. This prevents the system from stopping the tracking service.
+              </Text>
+            </View>
+            <TouchableOpacity style={[styles.row]} onPress={openBatterySettings}>
+              <View style={styles.rowLeft}>
+                <Ionicons name="battery-charging-outline" size={22} color={c.text} />
+                <Text style={[styles.rowLabel, { color: c.text }]}>Disable Battery Optimization</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={22} color={c.textTertiary} />
+            </TouchableOpacity>
+          </View>
+        </View>
+
         <View style={styles.footer}>
           <Text style={[styles.footerText, { color: c.textTertiary }]}>Nfit v1.0.2</Text>
           <Text style={[styles.footerText, { color: c.textTertiary }]}>Sensor-driven fitness</Text>
@@ -278,6 +302,8 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1 },
   rowLeft: { flexDirection: 'row', alignItems: 'center' },
   rowLabel: { fontSize: 16, marginLeft: 12 },
+  infoRow: { padding: 16, borderBottomWidth: 1 },
+  infoText: { fontSize: 13, lineHeight: 18 },
   input: { fontSize: 16, fontWeight: '600', textAlign: 'right', minWidth: 80 },
   dangerButton: { borderRadius: 12, padding: 16, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' },
   dangerButtonText: { fontSize: 16, fontWeight: '600', marginLeft: 8 },
