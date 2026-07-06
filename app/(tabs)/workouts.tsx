@@ -163,7 +163,7 @@ export default function WorkoutsScreen() {
         {step === 2 && (
           <View style={styles.stepContent}>
             <Text style={[styles.stepLabel, { color: c.text }]}>How long?</Text>
-            <View style={styles.presetsRow}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.presetsScroll}>
               {DURATION_PRESETS.map((p) => (
                 <TouchableOpacity
                   key={p}
@@ -181,7 +181,7 @@ export default function WorkoutsScreen() {
               >
                 <Text style={[styles.presetChipText, { color: duration && !DURATION_PRESETS.includes(parseInt(duration, 10)) ? c.background : c.text }]}>Custom</Text>
               </TouchableOpacity>
-            </View>
+            </ScrollView>
             <View style={styles.durationInputRow}>
               <TextInput
                 ref={durationInputRef}
@@ -368,7 +368,8 @@ const styles = StyleSheet.create({
   typeName: { fontSize: 13, fontWeight: '600', marginTop: 8, textAlign: 'center' },
 
   // Presets
-  presetsRow: { flexDirection: 'row', gap: 12, marginBottom: 12 },
+  presetsScroll: { marginBottom: 12 },
+  presetsRow: { flexDirection: 'row', gap: 12 },
   presetChip: { paddingVertical: 14, paddingHorizontal: 24, borderRadius: 12 },
   presetChipText: { fontSize: 14, fontWeight: '600' },
   durationInputRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 24, marginTop: 12 },

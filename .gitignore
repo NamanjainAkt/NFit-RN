@@ -42,7 +42,12 @@ tmp-export-test/
 
 # generated native folders
 /ios
-/android
+/android/app/build/
+/android/build/
+/android/.gradle/
+/android/captures/
+/android/local.properties
+/android/gradle/
 
 # Android / Gradle build artifacts
 **/build/
