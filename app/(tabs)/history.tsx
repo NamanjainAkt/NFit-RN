@@ -146,8 +146,9 @@ export default function HistoryScreen() {
               const alpha = Math.max(day.steps / maxSteps, 0.15);
               return (
                 <View key={day.date} style={styles.calendarCell}>
-                  <View style={[styles.calendarDot, { backgroundColor: reachedGoal ? c.success : c.accent, opacity: alpha }]} />
-                  <Text style={[styles.calendarDay, { color: c.textTertiary }]}>{dayNum}</Text>
+                  <View style={[styles.calendarDot, { backgroundColor: reachedGoal ? c.success : c.accent, opacity: alpha }]}>
+                    <Text style={[styles.calendarDay, { color: c.text }]}>{dayNum}</Text>
+                  </View>
                 </View>
               );
             })}
@@ -330,10 +331,10 @@ const styles = StyleSheet.create({
   summaryRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: 1 },
   summaryLabel: { fontSize: 14 },
   summaryValue: { fontSize: 14, fontWeight: '600' },
-  calendarGrid: { flexDirection: 'row', flexWrap: 'wrap' },
-  calendarCell: { width: `${100 / 7}%`, aspectRatio: 1, alignItems: 'center', justifyContent: 'center' },
-  calendarDot: { width: 20, height: 20, borderRadius: 10 },
-  calendarDay: { fontSize: 10, marginTop: 2 },
+  calendarGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 4 },
+  calendarCell: { width: `${100 / 7}%`, aspectRatio: 1, alignItems: 'center', justifyContent: 'center', padding: 4 },
+  calendarDot: { width: '100%', aspectRatio: 1, borderRadius: 999, alignItems: 'center', justifyContent: 'center', maxWidth: 40 },
+  calendarDay: { fontSize: 13, fontWeight: '600' },
   yearChart: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', height: 140 },
   yearBarContainer: { flex: 1, alignItems: 'center' },
   yearBarWrapper: { height: 120, justifyContent: 'flex-end' },

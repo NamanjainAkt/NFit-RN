@@ -1,9 +1,14 @@
 package expo.modules.nfitwidget
 
 import android.content.Context
+import android.content.Intent
+import android.content.SharedPreferences
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import expo.modules.kotlin.modules.ModuleDefinitionData
+
+private const val PREFS_NAME = "nfit_widget_data"
+private const val ACTION_REFRESH = "expo.modules.nfitwidget.REFRESH"
 
 class NfitWidgetModule : Module() {
   override fun definition(): ModuleDefinitionData = ModuleDefinition {
@@ -11,37 +16,55 @@ class NfitWidgetModule : Module() {
 
     AsyncFunction("updateWidget") {
       appContext.reactContext?.let { ctx ->
-        NfitWidgetProvider.triggerRefresh(ctx)
+        triggerRefresh(ctx)
       }
     }
 
     AsyncFunction("updateWidgetData") { args: WidgetDataArgs ->
       appContext.reactContext?.let { ctx ->
-        NfitWidgetProvider.updateData(
-          ctx, args.steps, args.goal, args.calories,
-          args.distance, args.streak, args.floors,
-          args.activeMinutes, args.distanceUnit
-        )
+        saveData(ctx, args)
+        triggerRefresh(ctx)
       }
     }
 
     AsyncFunction("getWidgetData") {
       appContext.reactContext?.let { ctx ->
-        NfitWidgetProvider.readData(ctx)
+        readData(ctx)
       }
     }
   }
 
-  companion object {
-    const val PREFS_NAME = "nfit_widget_data"
-    const val KEY_STEPS = "widget_steps"
-    const val KEY_GOAL = "widget_goal"
-    const val KEY_CALORIES = "widget_calories"
-    const val KEY_DISTANCE = "widget_distance"
-    const val KEY_STREAK = "widget_streak"
-    const val KEY_FLOORS = "widget_floors"
-    const val KEY_ACTIVE_MINUTES = "widget_active_minutes"
-    const val KEY_DISTANCE_UNIT = "widget_distance_unit"
+  private fun saveData(context: Context, args: WidgetDataArgs) {
+    context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
+      .putInt("widget_steps", args.steps)
+      .putInt("widget_goal", args.goal)
+      .putInt("widget_calories", args.calories)
+      .putFloat("widget_distance", args.distance.toFloat())
+      .putInt("widget_streak", args.streak)
+      .putInt("widget_floors", args.floors)
+      .putInt("widget_active_minutes", args.activeMinutes)
+      .putString("widget_distance_unit", args.distanceUnit)
+      .apply()
+  }
+
+  private fun readData(context: Context): Map<String, Any> {
+    val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    return mapOf(
+      "widget_steps" to prefs.getInt("widget_steps", 0),
+      "widget_goal" to prefs.getInt("widget_goal", 10000),
+      "widget_calories" to prefs.getInt("widget_calories", 0),
+      "widget_distance" to prefs.getFloat("widget_distance", 0.0f).toDouble(),
+      "widget_streak" to prefs.getInt("widget_streak", 0),
+      "widget_floors" to prefs.getInt("widget_floors", 0),
+      "widget_active_minutes" to prefs.getInt("widget_active_minutes", 0),
+      "widget_distance_unit" to (prefs.getString("widget_distance_unit", "km") ?: "km")
+    )
+  }
+
+  private fun triggerRefresh(context: Context) {
+    val intent = Intent(ACTION_REFRESH)
+    intent.setPackage(context.packageName)
+    context.sendBroadcast(intent)
   }
 }
 

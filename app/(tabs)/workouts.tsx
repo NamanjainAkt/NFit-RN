@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, FlatList, Alert, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, FlatList, Alert, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useUserStore, Workout } from '../../store/userStore';
@@ -31,6 +31,7 @@ export default function WorkoutsScreen() {
   const [selectedType, setSelectedType] = useState<typeof WORKOUT_TYPES[0] | null>(null);
   const [duration, setDuration] = useState('');
   const [notes, setNotes] = useState('');
+  const durationInputRef = useRef<TextInput>(null);
 
   const insets = useSafeAreaInsets();
   const darkMode = profile?.darkMode ?? false;
@@ -80,6 +81,9 @@ export default function WorkoutsScreen() {
 
   const nextStep = () => setStep((s) => Math.min(s + 1, 3));
   const prevStep = () => setStep((s) => Math.max(s - 1, 1));
+  const handleCustomPreset = () => {
+    durationInputRef.current?.focus();
+  };
 
   const renderWorkout = useCallback(({ item }: { item: Workout }) => (
     <View style={[styles.workoutCard, { backgroundColor: c.surface }]}>
@@ -100,6 +104,7 @@ export default function WorkoutsScreen() {
 
   if (showWizard) {
     return (
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}>
       <View style={{ flex: 1, backgroundColor: c.background }}>
         <View style={{ height: insets.top }} />
         <ScrollView style={{ flex: 1, paddingHorizontal: 20 }} contentContainerStyle={{ paddingBottom: 60 }} keyboardShouldPersistTaps="handled">
@@ -169,9 +174,17 @@ export default function WorkoutsScreen() {
                   <Text style={[styles.presetChipText, { color: parseInt(duration, 10) === p ? c.background : c.text }]}>{p} min</Text>
                 </TouchableOpacity>
               ))}
+              <TouchableOpacity
+                style={[styles.presetChip, { backgroundColor: duration && !DURATION_PRESETS.includes(parseInt(duration, 10)) ? c.text : c.surface }]}
+                onPress={handleCustomPreset}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.presetChipText, { color: duration && !DURATION_PRESETS.includes(parseInt(duration, 10)) ? c.background : c.text }]}>Custom</Text>
+              </TouchableOpacity>
             </View>
             <View style={styles.durationInputRow}>
               <TextInput
+                ref={durationInputRef}
                 style={[styles.durationInput, { backgroundColor: c.surface, borderColor: c.border, color: c.text }]}
                 value={duration}
                 onChangeText={setDuration}
@@ -258,6 +271,7 @@ export default function WorkoutsScreen() {
         )}
       </ScrollView>
       </View>
+      </KeyboardAvoidingView>
     );
   }
 
@@ -338,11 +352,11 @@ const styles = StyleSheet.create({
   wizardTitle: { fontSize: 20, fontWeight: 'bold' },
 
   // Step indicator
-  stepIndicator: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 32, paddingHorizontal: 40 },
-  stepDotRow: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+  stepIndicator: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 32 },
+  stepDotRow: { flexDirection: 'row', alignItems: 'center' },
   stepDot: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   stepDotText: { fontSize: 14, fontWeight: '700' },
-  stepLine: { height: 2, flex: 1, marginHorizontal: 4 },
+  stepLine: { height: 2, width: 40, marginHorizontal: 0 },
 
   // Step content
   stepContent: { flex: 1 },
@@ -354,10 +368,10 @@ const styles = StyleSheet.create({
   typeName: { fontSize: 13, fontWeight: '600', marginTop: 8, textAlign: 'center' },
 
   // Presets
-  presetsRow: { flexDirection: 'row', gap: 12, marginBottom: 20 },
-  presetChip: { paddingVertical: 12, paddingHorizontal: 20, borderRadius: 12 },
+  presetsRow: { flexDirection: 'row', gap: 12, marginBottom: 12 },
+  presetChip: { paddingVertical: 14, paddingHorizontal: 24, borderRadius: 12 },
   presetChipText: { fontSize: 14, fontWeight: '600' },
-  durationInputRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 24 },
+  durationInputRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 24, marginTop: 12 },
   durationInput: { borderRadius: 12, padding: 16, fontSize: 18, borderWidth: 1, flex: 1 },
   durationUnit: { fontSize: 16, marginLeft: 12, fontWeight: '500' },
 
