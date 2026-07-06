@@ -2,7 +2,7 @@
   "expo": {
     "name": "Nfit",
     "slug": "Nfit",
-    "version": "1.0.0",
+    "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -10,15 +10,18 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#E6F4FE"
+      "backgroundColor": "#8AB4F8"
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.nfit.app"
+      "bundleIdentifier": "com.nfit.app",
+      "infoPlist": {
+        "NSMotionUsageDescription": "Nfit needs access to your motion sensors to count your steps and track your activity."
+      }
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#8AB4F8",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -28,7 +31,11 @@
         "android.permission.ACTIVITY_RECOGNITION",
         "android.permission.BODY_SENSORS",
         "android.permission.HIGH_SAMPLING_RATE_SENSORS",
-        "android.permission.POST_NOTIFICATIONS"
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_HEALTH",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.WAKE_LOCK"
       ]
     },
     "web": {
@@ -39,7 +46,13 @@
       "expo-router",
       "expo-notifications",
       "expo-sharing",
-      "expo-font"
+      "expo-font",
+      [
+        "expo-sensors",
+        {
+          "isBackgroundEnabled": true
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

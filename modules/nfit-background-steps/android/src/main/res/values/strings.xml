@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="step_tracker_title">Tracking your steps</string>
+    <string name="step_tracker_text">%d steps counted today</string>
+    <string name="step_tracker_channel_name">Step Tracking</string>
+    <string name="step_tracker_channel_desc">Background step tracking service</string>
+</resources>

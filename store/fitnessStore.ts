@@ -30,6 +30,22 @@ interface FitnessState {
   getYearHistory: () => DailySteps[];
 }
 
+// Debounced widget refresh to avoid excessive calls
+let widgetRefreshTimeout: ReturnType<typeof setTimeout> | null = null;
+
+function debouncedWidgetRefresh() {
+  if (widgetRefreshTimeout) clearTimeout(widgetRefreshTimeout);
+  widgetRefreshTimeout = setTimeout(() => {
+    try {
+      // Dynamic import to avoid circular dependency
+      const { refreshWidget } = require('../utils/widgetBridge');
+      refreshWidget();
+    } catch {
+      // Widget module not available - silently ignore
+    }
+  }, 2000);
+}
+
 export const useFitnessStore = create<FitnessState>()(
   persist(
     (set, get) => ({
@@ -41,6 +57,7 @@ export const useFitnessStore = create<FitnessState>()(
       setTodaySteps: (steps) => {
         set({ todaySteps: steps });
         get().syncTodayWithHistory();
+        debouncedWidgetRefresh();
       },
       syncTodayWithHistory: () => {
         const { todaySteps, todayFloors, todayActiveMinutes, recordDay } = get();

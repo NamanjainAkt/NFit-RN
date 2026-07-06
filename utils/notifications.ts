@@ -11,6 +11,9 @@ Notifications.setNotificationHandler({
   }),
 });
 
+// Remove console.error in production - use silent fail
+const logError = __DEV__ ? console.error : () => {};
+
 export async function requestNotificationPermissions(): Promise<boolean> {
   const { status: existingStatus } = await Notifications.getPermissionsAsync();
   let finalStatus = existingStatus;

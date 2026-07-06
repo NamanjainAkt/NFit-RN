@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { MaterialIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { useUserStore } from '../../store/userStore';
 import { getColors } from '../../utils/theme';
 
@@ -19,7 +19,7 @@ export default function TabsLayout() {
           paddingBottom: 8,
           paddingTop: 8,
         },
-        tabBarActiveTintColor: c.text,
+        tabBarActiveTintColor: c.accent,
         tabBarInactiveTintColor: c.textTertiary,
       }}
     >
@@ -27,35 +27,35 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: 'Home',
-          tabBarIcon: ({ color }) => <MaterialIcons name="home" size={24} color={color} />,
+          tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? 'home' : 'home-outline'} size={22} color={color} />,
         }}
       />
       <Tabs.Screen
         name="workouts"
         options={{
           title: 'Workouts',
-          tabBarIcon: ({ color }) => <MaterialIcons name="fitness-center" size={24} color={color} />,
+          tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? 'fitness' : 'fitness-outline'} size={22} color={color} />,
         }}
       />
       <Tabs.Screen
         name="history"
         options={{
           title: 'History',
-          tabBarIcon: ({ color }) => <MaterialIcons name="bar-chart" size={24} color={color} />,
+          tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? 'bar-chart' : 'bar-chart-outline'} size={22} color={color} />,
         }}
       />
       <Tabs.Screen
         name="analytics"
         options={{
           title: 'Analytics',
-          tabBarIcon: ({ color }) => <MaterialIcons name="assessment" size={24} color={color} />,
+          tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? 'analytics' : 'analytics-outline'} size={22} color={color} />,
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
           title: 'Settings',
-          tabBarIcon: ({ color }) => <MaterialIcons name="settings" size={24} color={color} />,
+          tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? 'settings' : 'settings-outline'} size={22} color={color} />,
         }}
       />
     </Tabs>

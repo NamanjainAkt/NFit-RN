@@ -1,15 +1,12 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, Dimensions, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { MaterialIcons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useUserStore } from '../../store/userStore';
 import { useFitnessStore, DailySteps } from '../../store/fitnessStore';
 import { calculateCalories } from '../../utils/calculations';
 import { getColors } from '../../utils/theme';
 import { format, getDay, startOfMonth, endOfMonth, subDays, startOfYear } from 'date-fns';
-
-const { width } = Dimensions.get('window');
-const barWidth = (width - 80) / 7;
 
 type ViewMode = 'week' | 'month' | 'year';
 
@@ -45,14 +42,6 @@ export default function HistoryScreen() {
     const daysGoalMet = weekData.filter((d) => d.steps >= goal).length;
     const calories = profile ? calculateCalories(totalSteps, profile.weight, profile.useMetric) : 0;
     const goalPercent = Math.round((avgSteps / goal) * 100);
-    const bestDay = weekData.reduce((best, d) => d.steps > best.steps ? d : best, weekData[0]);
-    const bestDayName = days[getDay(new Date(bestDay.date))];
-
-    const weekStart = format(subDays(new Date(), 6), 'yyyy-MM-dd');
-    const weekWorkouts = workouts.filter((w) => w.date >= weekStart && w.date <= today);
-    const workoutCount = weekWorkouts.length;
-    const totalWorkoutDuration = weekWorkouts.reduce((sum, w) => sum + w.duration, 0);
-    const totalWorkoutCalories = weekWorkouts.reduce((sum, w) => sum + w.calories, 0);
 
     const prevWeekData: DailySteps[] = [];
     for (let i = 13; i >= 7; i--) {
@@ -77,7 +66,7 @@ export default function HistoryScreen() {
               return (
                 <View key={day.date} style={styles.barContainer}>
                   <View style={styles.barWrapper}>
-                    <View style={[styles.bar, { height: Math.max(height, 4), backgroundColor: reachedGoal ? c.success : c.text }]} />
+                    <View style={[styles.bar, { height: Math.max(height, 4), backgroundColor: reachedGoal ? c.success : c.accent }]} />
                   </View>
                   <Text style={[styles.barLabel, { color: c.textTertiary }]}>{dayName}</Text>
                 </View>
@@ -92,54 +81,22 @@ export default function HistoryScreen() {
 
         <View style={[styles.summaryContainer, { backgroundColor: c.surface }]}>
           <Text style={[styles.summaryTitle, { color: c.text }]}>Weekly Summary</Text>
-          <View style={[styles.summaryRow, { borderBottomColor: c.border }]}>
-            <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>Total Steps</Text>
-            <Text style={[styles.summaryValue, { color: c.text }]}>{totalSteps.toLocaleString()}</Text>
-          </View>
-          <View style={[styles.summaryRow, { borderBottomColor: c.border }]}>
-            <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>Goal</Text>
-            <Text style={[styles.summaryValue, { color: goalPercent >= 100 ? c.success : c.text }]}>{goalPercent}%</Text>
-          </View>
-          <View style={[styles.summaryRow, { borderBottomColor: c.border }]}>
-            <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>Total Calories</Text>
-            <Text style={[styles.summaryValue, { color: c.text }]}>{calories.toLocaleString()} kcal</Text>
-          </View>
-          <View style={[styles.summaryRow, { borderBottomColor: c.border }]}>
-            <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>Distance</Text>
-            <Text style={[styles.summaryValue, { color: c.text }]}>{totalDistance.toFixed(2)} {distanceUnit}</Text>
-          </View>
-          <View style={[styles.summaryRow, { borderBottomColor: c.border }]}>
-            <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>Total Floors</Text>
-            <Text style={[styles.summaryValue, { color: c.text }]}>{totalFloors}</Text>
-          </View>
-          <View style={[styles.summaryRow, { borderBottomColor: c.border }]}>
-            <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>Total Active Minutes</Text>
-            <Text style={[styles.summaryValue, { color: c.text }]}>{totalActiveMinutes}</Text>
-          </View>
-          <View style={[styles.summaryRow, { borderBottomColor: c.border }]}>
-            <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>Daily Average</Text>
-            <Text style={[styles.summaryValue, { color: c.text }]}>{avgSteps.toLocaleString()}</Text>
-          </View>
-          <View style={[styles.summaryRow, { borderBottomColor: c.border }]}>
-            <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>Days Goal Met</Text>
-            <Text style={[styles.summaryValue, { color: c.text }]}>{daysGoalMet}/7</Text>
-          </View>
-          <View style={[styles.summaryRow, { borderBottomColor: c.border }]}>
-            <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>Personal Record</Text>
-            <Text style={[styles.summaryValue, { color: c.success }]}>{bestDay.steps.toLocaleString()} ({bestDayName})</Text>
-          </View>
-          <View style={[styles.summaryRow, { borderBottomColor: c.border }]}>
-            <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>vs. Last Week</Text>
-            <Text style={[styles.summaryValue, { color: stepDelta >= 0 ? c.success : c.text }]}>
-              {stepDelta >= 0 ? '+' : ''}{stepDelta.toLocaleString()} ({stepDeltaPct >= 0 ? '+' : ''}{stepDeltaPct}%)
-            </Text>
-          </View>
-          {workoutCount > 0 && (
-            <View style={[styles.summaryRow, { borderBottomColor: c.border }]}>
-              <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>Workouts</Text>
-              <Text style={[styles.summaryValue, { color: c.text }]}>{workoutCount} · {totalWorkoutDuration}min · {totalWorkoutCalories}cal</Text>
+          {[
+            { label: 'Total Steps', value: totalSteps.toLocaleString(), color: c.accent },
+            { label: 'Goal', value: `${goalPercent}%`, color: goalPercent >= 100 ? c.success : c.text },
+            { label: 'Calories', value: `${calories.toLocaleString()} kcal`, color: c.calories },
+            { label: 'Distance', value: `${totalDistance.toFixed(2)} ${distanceUnit}`, color: c.distance },
+            { label: 'Total Floors', value: totalFloors.toString(), color: c.floors },
+            { label: 'Active Minutes', value: totalActiveMinutes.toString(), color: c.activeMinutes },
+            { label: 'Daily Average', value: avgSteps.toLocaleString(), color: c.text },
+            { label: 'Days Goal Met', value: `${daysGoalMet}/7`, color: daysGoalMet >= 5 ? c.success : c.warning },
+            { label: 'vs. Last Week', value: `${stepDelta >= 0 ? '+' : ''}${stepDelta.toLocaleString()} (${stepDeltaPct >= 0 ? '+' : ''}${stepDeltaPct}%)`, color: stepDelta >= 0 ? c.success : c.error },
+          ].map((row) => (
+            <View key={row.label} style={[styles.summaryRow, { borderBottomColor: c.border }]}>
+              <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>{row.label}</Text>
+              <Text style={[styles.summaryValue, { color: row.color }]}>{row.value}</Text>
             </View>
-          )}
+          ))}
         </View>
       </>
     );
@@ -158,30 +115,20 @@ export default function HistoryScreen() {
     const totalDistance = monthData.reduce((sum, d) => sum + d.distance, 0);
     const avgSteps = Math.round(totalSteps / daysInMonth);
     const daysGoalMet = monthData.filter((d) => d.steps >= goal).length;
-    const bestDay = monthData.reduce((best, d) => d.steps > best.steps ? d : best, monthData[0]);
     const calories = profile ? calculateCalories(totalSteps, profile.weight, profile.useMetric) : 0;
     const goalPercent = Math.round((avgSteps / goal) * 100);
-
-    const monthStart = format(startOfMonth(today), 'yyyy-MM-dd');
-    const monthEnd = format(endOfMonth(today), 'yyyy-MM-dd');
-    const monthWorkouts = workouts.filter((w) => w.date >= monthStart && w.date <= monthEnd);
-    const workoutCount = monthWorkouts.length;
-    const totalWorkoutDuration = monthWorkouts.reduce((sum, w) => sum + w.duration, 0);
-    const totalWorkoutCalories = monthWorkouts.reduce((sum, w) => sum + w.calories, 0);
 
     const prevMonthDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
     const prevMonthStart = startOfMonth(prevMonthDate);
     const prevMonthEnd = endOfMonth(prevMonthDate);
-    const prevMonthData: DailySteps[] = [];
-    const prevDaysInMonth = prevMonthEnd.getDate();
-    for (let i = 0; i < prevDaysInMonth; i++) {
+    let prevTotalSteps = 0;
+    for (let i = 0; i < prevMonthEnd.getDate(); i++) {
       const date = new Date(prevMonthStart);
       date.setDate(date.getDate() + i);
       const dateStr = format(date, 'yyyy-MM-dd');
       const existing = stepHistory.find((d) => d.date === dateStr);
-      if (existing) prevMonthData.push(existing);
+      if (existing) prevTotalSteps += existing.steps;
     }
-    const prevTotalSteps = prevMonthData.reduce((sum, d) => sum + d.steps, 0);
     const stepDelta = totalSteps - prevTotalSteps;
     const stepDeltaPct = prevTotalSteps > 0 ? Math.round((stepDelta / prevTotalSteps) * 100) : 0;
 
@@ -194,12 +141,12 @@ export default function HistoryScreen() {
               <View key={`empty-${i}`} style={styles.calendarCell} />
             ))}
             {monthData.map((day) => {
-              const height = (day.steps / maxSteps) * 30;
               const reachedGoal = day.steps >= goal;
               const dayNum = parseInt(day.date.split('-')[2], 10);
+              const alpha = Math.max(day.steps / maxSteps, 0.15);
               return (
                 <View key={day.date} style={styles.calendarCell}>
-                  <View style={[styles.calendarDot, { backgroundColor: reachedGoal ? c.success : c.text, opacity: Math.max(day.steps / maxSteps, 0.2) }]} />
+                  <View style={[styles.calendarDot, { backgroundColor: reachedGoal ? c.success : c.accent, opacity: alpha }]} />
                   <Text style={[styles.calendarDay, { color: c.textTertiary }]}>{dayNum}</Text>
                 </View>
               );
@@ -213,54 +160,22 @@ export default function HistoryScreen() {
 
         <View style={[styles.summaryContainer, { backgroundColor: c.surface }]}>
           <Text style={[styles.summaryTitle, { color: c.text }]}>Monthly Summary</Text>
-          <View style={[styles.summaryRow, { borderBottomColor: c.border }]}>
-            <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>Total Steps</Text>
-            <Text style={[styles.summaryValue, { color: c.text }]}>{totalSteps.toLocaleString()}</Text>
-          </View>
-          <View style={[styles.summaryRow, { borderBottomColor: c.border }]}>
-            <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>Goal</Text>
-            <Text style={[styles.summaryValue, { color: goalPercent >= 100 ? c.success : c.text }]}>{goalPercent}%</Text>
-          </View>
-          <View style={[styles.summaryRow, { borderBottomColor: c.border }]}>
-            <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>Total Calories</Text>
-            <Text style={[styles.summaryValue, { color: c.text }]}>{calories.toLocaleString()} kcal</Text>
-          </View>
-          <View style={[styles.summaryRow, { borderBottomColor: c.border }]}>
-            <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>Distance</Text>
-            <Text style={[styles.summaryValue, { color: c.text }]}>{totalDistance.toFixed(2)} {distanceUnit}</Text>
-          </View>
-          <View style={[styles.summaryRow, { borderBottomColor: c.border }]}>
-            <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>Total Floors</Text>
-            <Text style={[styles.summaryValue, { color: c.text }]}>{totalFloors}</Text>
-          </View>
-          <View style={[styles.summaryRow, { borderBottomColor: c.border }]}>
-            <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>Total Active Minutes</Text>
-            <Text style={[styles.summaryValue, { color: c.text }]}>{totalActiveMinutes}</Text>
-          </View>
-          <View style={[styles.summaryRow, { borderBottomColor: c.border }]}>
-            <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>Daily Average</Text>
-            <Text style={[styles.summaryValue, { color: c.text }]}>{avgSteps.toLocaleString()}</Text>
-          </View>
-          <View style={[styles.summaryRow, { borderBottomColor: c.border }]}>
-            <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>Days Goal Met</Text>
-            <Text style={[styles.summaryValue, { color: c.text }]}>{daysGoalMet}/{daysInMonth}</Text>
-          </View>
-          <View style={[styles.summaryRow, { borderBottomColor: c.border }]}>
-            <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>Best Day</Text>
-            <Text style={[styles.summaryValue, { color: c.success }]}>{bestDay.steps.toLocaleString()} steps</Text>
-          </View>
-          <View style={[styles.summaryRow, { borderBottomColor: c.border }]}>
-            <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>vs. Last Month</Text>
-            <Text style={[styles.summaryValue, { color: stepDelta >= 0 ? c.success : c.text }]}>
-              {stepDelta >= 0 ? '+' : ''}{stepDelta.toLocaleString()} ({stepDeltaPct >= 0 ? '+' : ''}{stepDeltaPct}%)
-            </Text>
-          </View>
-          {workoutCount > 0 && (
-            <View style={[styles.summaryRow, { borderBottomColor: c.border }]}>
-              <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>Workouts</Text>
-              <Text style={[styles.summaryValue, { color: c.text }]}>{workoutCount} · {totalWorkoutDuration}min · {totalWorkoutCalories}cal</Text>
+          {[
+            { label: 'Total Steps', value: totalSteps.toLocaleString(), color: c.accent },
+            { label: 'Goal', value: `${goalPercent}%`, color: goalPercent >= 100 ? c.success : c.text },
+            { label: 'Calories', value: `${calories.toLocaleString()} kcal`, color: c.calories },
+            { label: 'Distance', value: `${totalDistance.toFixed(2)} ${distanceUnit}`, color: c.distance },
+            { label: 'Total Floors', value: totalFloors.toString(), color: c.floors },
+            { label: 'Active Minutes', value: totalActiveMinutes.toString(), color: c.activeMinutes },
+            { label: 'Daily Average', value: avgSteps.toLocaleString(), color: c.text },
+            { label: 'Days Goal Met', value: `${daysGoalMet}/${daysInMonth}`, color: daysGoalMet >= daysInMonth * 0.7 ? c.success : c.warning },
+            { label: 'vs. Last Month', value: `${stepDelta >= 0 ? '+' : ''}${stepDelta.toLocaleString()} (${stepDeltaPct >= 0 ? '+' : ''}${stepDeltaPct}%)`, color: stepDelta >= 0 ? c.success : c.error },
+          ].map((row) => (
+            <View key={row.label} style={[styles.summaryRow, { borderBottomColor: c.border }]}>
+              <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>{row.label}</Text>
+              <Text style={[styles.summaryValue, { color: row.color }]}>{row.value}</Text>
             </View>
-          )}
+          ))}
         </View>
       </>
     );
@@ -280,15 +195,6 @@ export default function HistoryScreen() {
     const monthsGoalMet = yearData.filter((d) => d.steps >= goal * 30).length;
     const calories = profile ? calculateCalories(totalSteps, profile.weight, profile.useMetric) : 0;
     const goalPercent = Math.round((avgSteps / (goal * 30)) * 100);
-    const bestMonth = yearData.reduce((best, d) => d.steps > best.steps ? d : best, yearData[0]);
-    const bestMonthName = months[parseInt(bestMonth.date.split('-')[1], 10) - 1];
-
-    const yearStart = format(startOfYear(today), 'yyyy-MM-dd');
-    const yearEnd = format(today, 'yyyy-MM-dd');
-    const yearWorkouts = workouts.filter((w) => w.date >= yearStart && w.date <= yearEnd);
-    const workoutCount = yearWorkouts.length;
-    const totalWorkoutDuration = yearWorkouts.reduce((sum, w) => sum + w.duration, 0);
-    const totalWorkoutCalories = yearWorkouts.reduce((sum, w) => sum + w.calories, 0);
 
     const lastYear = today.getFullYear() - 1;
     let prevYearSteps = 0;
@@ -314,7 +220,7 @@ export default function HistoryScreen() {
               return (
                 <View key={month.date} style={styles.yearBarContainer}>
                   <View style={styles.yearBarWrapper}>
-                    <View style={[styles.yearBar, { height: Math.max(height, 4), backgroundColor: reachedGoal ? c.success : c.text }]} />
+                    <View style={[styles.yearBar, { height: Math.max(height, 4), backgroundColor: reachedGoal ? c.success : c.accent }]} />
                   </View>
                   <Text style={[styles.yearBarLabel, { color: c.textTertiary }]}>{months[index]}</Text>
                 </View>
@@ -329,54 +235,22 @@ export default function HistoryScreen() {
 
         <View style={[styles.summaryContainer, { backgroundColor: c.surface }]}>
           <Text style={[styles.summaryTitle, { color: c.text }]}>Yearly Summary</Text>
-          <View style={[styles.summaryRow, { borderBottomColor: c.border }]}>
-            <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>Total Steps</Text>
-            <Text style={[styles.summaryValue, { color: c.text }]}>{totalSteps.toLocaleString()}</Text>
-          </View>
-          <View style={[styles.summaryRow, { borderBottomColor: c.border }]}>
-            <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>Goal</Text>
-            <Text style={[styles.summaryValue, { color: goalPercent >= 100 ? c.success : c.text }]}>{goalPercent}%</Text>
-          </View>
-          <View style={[styles.summaryRow, { borderBottomColor: c.border }]}>
-            <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>Total Calories</Text>
-            <Text style={[styles.summaryValue, { color: c.text }]}>{calories.toLocaleString()} kcal</Text>
-          </View>
-          <View style={[styles.summaryRow, { borderBottomColor: c.border }]}>
-            <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>Distance</Text>
-            <Text style={[styles.summaryValue, { color: c.text }]}>{totalDistance.toFixed(2)} {distanceUnit}</Text>
-          </View>
-          <View style={[styles.summaryRow, { borderBottomColor: c.border }]}>
-            <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>Total Floors</Text>
-            <Text style={[styles.summaryValue, { color: c.text }]}>{totalFloors}</Text>
-          </View>
-          <View style={[styles.summaryRow, { borderBottomColor: c.border }]}>
-            <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>Total Active Minutes</Text>
-            <Text style={[styles.summaryValue, { color: c.text }]}>{totalActiveMinutes}</Text>
-          </View>
-          <View style={[styles.summaryRow, { borderBottomColor: c.border }]}>
-            <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>Monthly Average</Text>
-            <Text style={[styles.summaryValue, { color: c.text }]}>{avgSteps.toLocaleString()}</Text>
-          </View>
-          <View style={[styles.summaryRow, { borderBottomColor: c.border }]}>
-            <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>Months Goal Met</Text>
-            <Text style={[styles.summaryValue, { color: c.text }]}>{monthsGoalMet}/{monthsElapsed}</Text>
-          </View>
-          <View style={[styles.summaryRow, { borderBottomColor: c.border }]}>
-            <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>Best Month</Text>
-            <Text style={[styles.summaryValue, { color: c.success }]}>{bestMonthName} · {bestMonth.steps.toLocaleString()} steps</Text>
-          </View>
-          <View style={[styles.summaryRow, { borderBottomColor: c.border }]}>
-            <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>vs. Last Year</Text>
-            <Text style={[styles.summaryValue, { color: stepDelta >= 0 ? c.success : c.text }]}>
-              {stepDelta >= 0 ? '+' : ''}{stepDelta.toLocaleString()} ({stepDeltaPct >= 0 ? '+' : ''}{stepDeltaPct}%)
-            </Text>
-          </View>
-          {workoutCount > 0 && (
-            <View style={[styles.summaryRow, { borderBottomColor: c.border }]}>
-              <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>Workouts</Text>
-              <Text style={[styles.summaryValue, { color: c.text }]}>{workoutCount} · {totalWorkoutDuration}min · {totalWorkoutCalories}cal</Text>
+          {[
+            { label: 'Total Steps', value: totalSteps.toLocaleString(), color: c.accent },
+            { label: 'Goal', value: `${goalPercent}%`, color: goalPercent >= 100 ? c.success : c.text },
+            { label: 'Calories', value: `${calories.toLocaleString()} kcal`, color: c.calories },
+            { label: 'Distance', value: `${totalDistance.toFixed(2)} ${distanceUnit}`, color: c.distance },
+            { label: 'Total Floors', value: totalFloors.toString(), color: c.floors },
+            { label: 'Active Minutes', value: totalActiveMinutes.toString(), color: c.activeMinutes },
+            { label: 'Monthly Average', value: avgSteps.toLocaleString(), color: c.text },
+            { label: 'Months Goal Met', value: `${monthsGoalMet}/${monthsElapsed}`, color: monthsGoalMet >= monthsElapsed * 0.7 ? c.success : c.warning },
+            { label: 'vs. Last Year', value: `${stepDelta >= 0 ? '+' : ''}${stepDelta.toLocaleString()} (${stepDeltaPct >= 0 ? '+' : ''}${stepDeltaPct}%)`, color: stepDelta >= 0 ? c.success : c.error },
+          ].map((row) => (
+            <View key={row.label} style={[styles.summaryRow, { borderBottomColor: c.border }]}>
+              <Text style={[styles.summaryLabel, { color: c.textTertiary }]}>{row.label}</Text>
+              <Text style={[styles.summaryValue, { color: row.color }]}>{row.value}</Text>
             </View>
-          )}
+          ))}
         </View>
       </>
     );
@@ -386,44 +260,46 @@ export default function HistoryScreen() {
     <View style={{ flex: 1, backgroundColor: c.background }}>
       <View style={{ height: insets.top }} />
       <ScrollView style={{ flex: 1, paddingHorizontal: 20 }} contentContainerStyle={{ paddingBottom: 60 }}>
-      <View style={styles.header}>
-        <Text style={[styles.title, { color: c.text }]}>History</Text>
-        <Text style={[styles.subtitle, { color: c.textTertiary }]}>Your fitness journey</Text>
-      </View>
-
-      <View style={[styles.streakCard, { backgroundColor: c.surface }]}>
-        <MaterialIcons name="emoji-events" size={40} color={c.text} />
-        <View style={{ marginLeft: 16 }}>
-          <Text style={[styles.streakValue, { color: c.text }]}>{stepStreak} days</Text>
-          <Text style={[styles.streakLabel, { color: c.textTertiary }]}>Current streak</Text>
+        <View style={styles.header}>
+          <Text style={[styles.title, { color: c.text }]}>History</Text>
+          <Text style={[styles.subtitle, { color: c.textTertiary }]}>Your fitness journey</Text>
         </View>
-      </View>
 
-      <View style={[styles.tabsContainer, { backgroundColor: c.surface }]}>
-        <TouchableOpacity
-          style={[styles.tab, viewMode === 'week' && { backgroundColor: c.background }]}
-          onPress={() => setViewMode('week')}
-        >
-          <Text style={[styles.tabText, { color: viewMode === 'week' ? c.text : c.textTertiary }]}>Week</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, viewMode === 'month' && { backgroundColor: c.background }]}
-          onPress={() => setViewMode('month')}
-        >
-          <Text style={[styles.tabText, { color: viewMode === 'month' ? c.text : c.textTertiary }]}>Month</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, viewMode === 'year' && { backgroundColor: c.background }]}
-          onPress={() => setViewMode('year')}
-        >
-          <Text style={[styles.tabText, { color: viewMode === 'year' ? c.text : c.textTertiary }]}>Year</Text>
-        </TouchableOpacity>
-      </View>
+        <View style={[styles.streakCard, { backgroundColor: c.surface }]}>
+          <View style={[styles.streakIcon, { backgroundColor: c.streak + '20' }]}>
+            <MaterialCommunityIcons name="fire" size={28} color={c.streak} />
+          </View>
+          <View style={{ marginLeft: 16 }}>
+            <Text style={[styles.streakValue, { color: c.streak }]}>{stepStreak} days</Text>
+            <Text style={[styles.streakLabel, { color: c.textTertiary }]}>Current streak</Text>
+          </View>
+        </View>
 
-      {viewMode === 'week' && renderWeekView()}
-      {viewMode === 'month' && renderMonthView()}
-      {viewMode === 'year' && renderYearView()}
-    </ScrollView>
+        <View style={[styles.tabsContainer, { backgroundColor: c.surface }]}>
+          <TouchableOpacity
+            style={[styles.tab, viewMode === 'week' && { backgroundColor: c.background }]}
+            onPress={() => setViewMode('week')}
+          >
+            <Text style={[styles.tabText, { color: viewMode === 'week' ? c.accent : c.textTertiary }]}>Week</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, viewMode === 'month' && { backgroundColor: c.background }]}
+            onPress={() => setViewMode('month')}
+          >
+            <Text style={[styles.tabText, { color: viewMode === 'month' ? c.accent : c.textTertiary }]}>Month</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, viewMode === 'year' && { backgroundColor: c.background }]}
+            onPress={() => setViewMode('year')}
+          >
+            <Text style={[styles.tabText, { color: viewMode === 'year' ? c.accent : c.textTertiary }]}>Year</Text>
+          </TouchableOpacity>
+        </View>
+
+        {viewMode === 'week' && renderWeekView()}
+        {viewMode === 'month' && renderMonthView()}
+        {viewMode === 'year' && renderYearView()}
+      </ScrollView>
     </View>
   );
 }
@@ -433,6 +309,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 28, fontWeight: 'bold' },
   subtitle: { fontSize: 16, marginTop: 4 },
   streakCard: { borderRadius: 16, padding: 20, flexDirection: 'row', alignItems: 'center', marginBottom: 24, elevation: 2 },
+  streakIcon: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
   streakValue: { fontSize: 24, fontWeight: 'bold' },
   streakLabel: { fontSize: 14, marginTop: 2 },
   tabsContainer: { flexDirection: 'row', borderRadius: 12, padding: 4, marginBottom: 24 },
@@ -441,9 +318,9 @@ const styles = StyleSheet.create({
   chartContainer: { borderRadius: 16, padding: 20, marginBottom: 24, elevation: 2 },
   chartTitle: { fontSize: 18, fontWeight: '600', marginBottom: 20 },
   chart: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', height: 180 },
-  barContainer: { alignItems: 'center', width: barWidth },
+  barContainer: { alignItems: 'center', flex: 1 },
   barWrapper: { height: 150, justifyContent: 'flex-end' },
-  bar: { width: barWidth - 8, borderRadius: 6, minHeight: 4 },
+  bar: { width: '70%', borderRadius: 6, minHeight: 4 },
   barLabel: { fontSize: 12, marginTop: 8 },
   goalLine: { flexDirection: 'row', alignItems: 'center', marginTop: 12, paddingTop: 8, borderTopWidth: 1 },
   goalLineIndicator: { width: 8, height: 8, borderRadius: 4, marginRight: 8 },

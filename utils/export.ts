@@ -69,8 +69,8 @@ export async function shareData(data: ExportData, format: 'json' | 'csv'): Promi
       return true;
     }
     return false;
-  } catch (error) {
-    console.error('Export failed:', error);
+  } catch {
+    // Silently fail in production
     return false;
   }
 }

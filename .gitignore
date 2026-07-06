@@ -43,3 +43,9 @@ tmp-export-test/
 # generated native folders
 /ios
 /android
+
+# native module build artifacts
+modules/*/android/build/
+
+# OpenCode config
+.commandcode/

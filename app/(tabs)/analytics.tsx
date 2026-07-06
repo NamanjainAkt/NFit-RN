@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, Dimensions, ScrollView, TouchableOpacity, TextInput } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { MaterialIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { useUserStore } from '../../store/userStore';
 import { useFitnessStore } from '../../store/fitnessStore';
 import { getColors } from '../../utils/theme';
@@ -21,9 +21,6 @@ const PRESETS: { key: RangePreset; label: string }[] = [
 
 const DAYS_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-const WORKOUT_COLORS = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F'];
-const BAR_COLORS = ['#FF6B6B', '#4ECDC4', '#45B7D1'];
-
 export default function AnalyticsScreen() {
   const profile = useUserStore((state) => state.profile);
   const workouts = useUserStore((state) => state.workouts);
@@ -31,6 +28,8 @@ export default function AnalyticsScreen() {
   const todaySteps = useFitnessStore((state) => state.todaySteps);
   const todayFloors = useFitnessStore((state) => state.todayFloors);
   const todayActiveMinutes = useFitnessStore((state) => state.todayActiveMinutes);
+  const getWeekHistory = useFitnessStore((state) => state.getWeekHistory);
+  const getMonthHistory = useFitnessStore((state) => state.getMonthHistory);
 
   const [rangePreset, setRangePreset] = useState<RangePreset>('30d');
   const [customStart, setCustomStart] = useState('');
@@ -142,7 +141,7 @@ export default function AnalyticsScreen() {
           <Text style={[styles.subtitle, { color: c.textTertiary }]}>Deep dive into your activity</Text>
         </View>
 
-        {/* ── Date Range ── */}
+        {/* Date Range */}
         <View style={styles.section}>
           <View style={styles.presetsRow}>
             {PRESETS.map((p) => {
@@ -150,11 +149,11 @@ export default function AnalyticsScreen() {
               return (
                 <TouchableOpacity
                   key={p.key}
-                  style={[styles.presetChip, { backgroundColor: active ? c.text : c.surface }]}
+                  style={[styles.presetChip, { backgroundColor: active ? c.accent : c.surface }]}
                   onPress={() => setRangePreset(p.key)}
                   activeOpacity={0.7}
                 >
-                  <Text style={[styles.presetChipText, { color: active ? c.background : c.text }]}>
+                  <Text style={[styles.presetChipText, { color: active ? '#FFFFFF' : c.text }]}>
                     {p.label}
                   </Text>
                 </TouchableOpacity>
@@ -198,7 +197,7 @@ export default function AnalyticsScreen() {
           </View>
         </View>
 
-        {/* ── Goal Progress ── */}
+        {/* Goal Progress */}
         <View style={styles.section}>
           <Text style={[styles.secTitle, { color: c.text }]}>Goal Progress</Text>
           <View style={[styles.card, { backgroundColor: c.surface }]}>
@@ -207,8 +206,8 @@ export default function AnalyticsScreen() {
                 <View style={[styles.goalRingBorder, {
                   width: goalRingSize * 1.6, height: goalRingSize * 1.6, borderRadius: goalRingSize * 0.8,
                   borderWidth: goalRingSize * 0.12,
-                  borderColor: todayGoalPct >= 1 ? c.success : c.text,
-                  opacity: todayGoalPct,
+                  borderColor: todayGoalPct >= 1 ? c.success : c.accent,
+                  opacity: Math.max(todayGoalPct, 0.1),
                 }]} />
                 <View style={styles.goalInner}>
                   <Text style={[styles.goalPct, { color: todayGoalPct >= 1 ? c.success : c.text }]}>
@@ -223,12 +222,12 @@ export default function AnalyticsScreen() {
             </View>
             <View style={[styles.goalStatsRow, { borderTopColor: c.border }]}>
               {[
-                { icon: 'stairs' as const, value: todayFloors, label: 'Floors' },
-                { icon: 'timer' as const, value: todayActiveMinutes, label: 'Active Min' },
-                { icon: 'local-fire-department' as const, value: totalCalories, label: 'Calories' },
+                { icon: 'stairs' as const, value: todayFloors, label: 'Floors', color: c.floors },
+                { icon: 'timer' as const, value: todayActiveMinutes, label: 'Active Min', color: c.activeMinutes },
+                { icon: 'flame' as const, value: totalCalories, label: 'Calories', color: c.calories },
               ].map((s) => (
                 <View key={s.label} style={styles.goalStat}>
-                  <MaterialIcons name={s.icon} size={20} color={c.textTertiary} />
+                  <Ionicons name={s.icon === 'timer' ? 'time-outline' : s.icon === 'flame' ? 'flame-outline' : 'trending-up-outline'} size={20} color={s.color} />
                   <Text style={[styles.goalStatVal, { color: c.text }]}>{s.value}</Text>
                   <Text style={[styles.goalStatLbl, { color: c.textTertiary }]}>{s.label}</Text>
                 </View>
@@ -237,7 +236,7 @@ export default function AnalyticsScreen() {
           </View>
         </View>
 
-        {/* ── Step Trends ── */}
+        {/* Step Trends */}
         {filteredHistory.length > 1 && (
           <View style={styles.section}>
             <Text style={[styles.secTitle, { color: c.text }]}>Step Trends</Text>
@@ -248,7 +247,7 @@ export default function AnalyticsScreen() {
                   const showLabel = i % showEveryN === 0 || i === filteredHistory.length - 1;
                   return (
                     <View key={d.date} style={styles.barCol}>
-                      <View style={[styles.bar, { height: barH, backgroundColor: d.steps >= goal ? c.success : c.text }]} />
+                      <View style={[styles.bar, { height: barH, backgroundColor: d.steps >= goal ? c.success : c.accent }]} />
                       {showLabel && <Text style={[styles.barLbl, { color: c.textTertiary }]}>{format(new Date(d.date), 'd/M')}</Text>}
                     </View>
                   );
@@ -262,14 +261,14 @@ export default function AnalyticsScreen() {
           </View>
         )}
 
-        {/* ── Activity Breakdown ── */}
+        {/* Activity Breakdown */}
         <View style={styles.section}>
           <Text style={[styles.secTitle, { color: c.text }]}>Activity Breakdown</Text>
           <View style={styles.breakdownRow}>
             {[
-              { label: 'Steps', value: todaySteps.toLocaleString(), pct: todayGoalPct, goal: goal.toLocaleString() },
-              { label: 'Floors', value: todayFloors.toString(), pct: Math.min(todayFloors / 10, 1), goal: '10' },
-              { label: 'Active Min', value: todayActiveMinutes.toString(), pct: Math.min(todayActiveMinutes / 60, 1), goal: '60' },
+              { label: 'Steps', value: todaySteps.toLocaleString(), pct: todayGoalPct, goalVal: goal.toLocaleString(), color: c.accent },
+              { label: 'Floors', value: todayFloors.toString(), pct: Math.min(todayFloors / 10, 1), goalVal: '10', color: c.floors },
+              { label: 'Active Min', value: todayActiveMinutes.toString(), pct: Math.min(todayActiveMinutes / 60, 1), goalVal: '60', color: c.activeMinutes },
             ].map((item, i) => (
               <View key={item.label} style={[styles.breakdownCard, { backgroundColor: c.surface }]}>
                 <View style={[styles.breakdownRing, {
@@ -280,7 +279,7 @@ export default function AnalyticsScreen() {
                   <View style={[styles.breakdownRingFill, {
                     width: 72, height: 72, borderRadius: 36,
                     borderWidth: 6,
-                    borderColor: BAR_COLORS[i],
+                    borderColor: item.color,
                     opacity: item.pct,
                   }]} />
                   <Text style={[styles.breakdownPct, { color: c.text }]}>{Math.round(item.pct * 100)}%</Text>
@@ -292,13 +291,13 @@ export default function AnalyticsScreen() {
           </View>
         </View>
 
-        {/* ── Week Over Week ── */}
+        {/* Week Over Week */}
         <View style={styles.section}>
           <Text style={[styles.secTitle, { color: c.text }]}>Week Over Week</Text>
           <View style={[styles.card, { backgroundColor: c.surface }]}>
             <View style={styles.wowLegend}>
               <View style={styles.wowLegendItem}>
-                <View style={[styles.wowDot, { backgroundColor: c.text }]} />
+                <View style={[styles.wowDot, { backgroundColor: c.accent }]} />
                 <Text style={[styles.wowLbl, { color: c.textTertiary }]}>This Week</Text>
               </View>
               <View style={styles.wowLegendItem}>
@@ -314,7 +313,7 @@ export default function AnalyticsScreen() {
                   return (
                     <View key={day} style={styles.wowCol}>
                       <View style={styles.wowBarPair}>
-                        <View style={[styles.wowBar, { height: h1, backgroundColor: c.text, width: '40%' }]} />
+                        <View style={[styles.wowBar, { height: h1, backgroundColor: c.accent, width: '40%' }]} />
                         <View style={[styles.wowBar, { height: h2, backgroundColor: c.textTertiary, width: '40%', opacity: 0.4 }]} />
                       </View>
                       <Text style={[styles.wowDayLbl, { color: c.textTertiary }]}>{day[0]}</Text>
@@ -334,20 +333,21 @@ export default function AnalyticsScreen() {
           </View>
         </View>
 
-        {/* ── Workout Distribution ── */}
+        {/* Workout Distribution */}
         {workoutTypes.length > 0 && (
           <View style={styles.section}>
             <Text style={[styles.secTitle, { color: c.text }]}>Workout Distribution</Text>
             <View style={[styles.card, { backgroundColor: c.surface }]}>
               <View style={styles.pieList}>
                 {workoutTypes.map((wt, i) => {
+                  const workoutColors = [c.chart1, c.chart2, c.chart3, c.chart4, c.chart5, c.chart6];
                   const pct = Math.round((wt.totalDuration / Math.max(...workoutTypes.map((w) => w.totalDuration), 1)) * 100);
                   return (
                     <View key={wt.name} style={[styles.pieRow, { borderBottomColor: c.border }]}>
-                      <View style={[styles.pieDot, { backgroundColor: WORKOUT_COLORS[i % WORKOUT_COLORS.length] }]} />
+                      <View style={[styles.pieDot, { backgroundColor: workoutColors[i % workoutColors.length] }]} />
                       <Text style={[styles.pieName, { color: c.text }]}>{wt.name}</Text>
                       <View style={styles.pieBarWrap}>
-                        <View style={[styles.pieBar, { width: `${pct}%`, backgroundColor: WORKOUT_COLORS[i % WORKOUT_COLORS.length] }]} />
+                        <View style={[styles.pieBar, { width: `${pct}%`, backgroundColor: workoutColors[i % workoutColors.length] }]} />
                       </View>
                       <Text style={[styles.pieCount, { color: c.textTertiary }]}>{wt.count}x</Text>
                       <Text style={[styles.pieDur, { color: c.textSecondary }]}>{wt.totalDuration}min</Text>
@@ -364,7 +364,7 @@ export default function AnalyticsScreen() {
           </View>
         )}
 
-        {/* ── Activity Calendar ── */}
+        {/* Activity Calendar */}
         <View style={styles.section}>
           <Text style={[styles.secTitle, { color: c.text }]}>Activity Calendar</Text>
           <View style={[styles.card, { backgroundColor: c.surface }]}>
@@ -379,34 +379,32 @@ export default function AnalyticsScreen() {
               {monthData.days.map((day) => {
                 const int = day.steps > 0 ? Math.min(day.steps / goal, 1) : 0;
                 const alpha = int > 0 ? 0.15 + int * 0.85 : 0.04;
+                const colorVal = int > 0.5 ? c.success : c.accent;
                 const isToday = day.date === format(new Date(), 'yyyy-MM-dd');
                 return (
                   <TouchableOpacity
                     key={day.date}
                     style={[
                       styles.calCell,
-                      { backgroundColor: `rgba(${darkMode ? 255 : 0},${darkMode ? 255 : 0},${darkMode ? 255 : 0},${alpha})` },
+                      { backgroundColor: colorVal + Math.round(alpha * 255).toString(16).padStart(2, '0') },
                       isToday && { borderWidth: 1, borderColor: c.text },
                     ]}
                     activeOpacity={0.6}
                   >
-                    <Text style={[styles.calDayNum, { color: day.steps === 0 ? c.textTertiary : alpha > 0.5 ? c.background : c.text }]}>
+                    <Text style={[styles.calDayNum, { color: int > 0.5 ? '#FFFFFF' : c.text }]}>
                       {day.dayNum}
                     </Text>
                   </TouchableOpacity>
                 );
               })}
             </View>
-              <View style={styles.calLegend}>
-                <Text style={[styles.calLegText, { color: c.textTertiary }]}>Less</Text>
-                {[0.08, 0.3, 0.5, 0.75, 1].map((v) => {
-                  const base = darkMode ? 255 : 0;
-                  return (
-                    <View key={v} style={[styles.calLegBox, { backgroundColor: `rgba(${base},${base},${base},${v})` }]} />
-                  );
-                })}
-                <Text style={[styles.calLegText, { color: c.textTertiary }]}>More</Text>
-              </View>
+            <View style={styles.calLegend}>
+              <Text style={[styles.calLegText, { color: c.textTertiary }]}>Less</Text>
+              {[[0.08, c.accent], [0.3, c.accent], [0.5, c.accent], [0.75, c.success], [1, c.success]].map(([v, col]) => (
+                <View key={v.toString()} style={[styles.calLegBox, { backgroundColor: col as string + Math.round((v as number) * 255).toString(16).padStart(2, '0') }]} />
+              ))}
+              <Text style={[styles.calLegText, { color: c.textTertiary }]}>More</Text>
+            </View>
           </View>
         </View>
       </ScrollView>

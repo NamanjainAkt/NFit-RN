@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { MaterialIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { useUserStore } from '../../store/userStore';
 import { useFitnessStore } from '../../store/fitnessStore';
 import { useRouter } from 'expo-router';
@@ -15,7 +15,7 @@ export default function SettingsScreen() {
   const updateProfile = useUserStore((state) => state.updateProfile);
   const setHasCompletedOnboarding = useUserStore((state) => state.setHasCompletedOnboarding);
   const stepHistory = useFitnessStore((state) => state.stepHistory);
-  
+
   const [isExporting, setIsExporting] = useState(false);
 
   if (!profile) return null;
@@ -89,8 +89,8 @@ export default function SettingsScreen() {
   const handleExportData = () => {
     Alert.alert('Export Data', 'Choose export format', [
       { text: 'Cancel', style: 'cancel' },
-      { 
-        text: 'JSON', 
+      {
+        text: 'JSON',
         onPress: async () => {
           setIsExporting(true);
           const exportData: ExportData = {
@@ -115,8 +115,8 @@ export default function SettingsScreen() {
           setIsExporting(false);
         }
       },
-      { 
-        text: 'CSV', 
+      {
+        text: 'CSV',
         onPress: async () => {
           setIsExporting(true);
           const exportData: ExportData = {
@@ -148,121 +148,121 @@ export default function SettingsScreen() {
     <View style={[styles.container, { backgroundColor: c.background }]}>
       <View style={{ height: insets.top }} />
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}>
-      <View style={styles.header}>
-        <Text style={[styles.title, { color: c.text }]}>Settings</Text>
-        <Text style={[styles.subtitle, { color: c.textTertiary }]}>Customize your experience</Text>
-      </View>
+        <View style={styles.header}>
+          <Text style={[styles.title, { color: c.text }]}>Settings</Text>
+          <Text style={[styles.subtitle, { color: c.textTertiary }]}>Customize your experience</Text>
+        </View>
 
-      <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: c.textTertiary }]}>Profile</Text>
-        <View style={[styles.card, { backgroundColor: c.surface }]}>
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: c.textTertiary }]}>Profile</Text>
+          <View style={[styles.card, { backgroundColor: c.surface }]}>
             <View style={[styles.row, { borderBottomColor: c.border }]}>
               <View style={styles.rowLeft}>
-                <MaterialIcons name="person" size={24} color={c.text} />
+                <Ionicons name="person-outline" size={22} color={c.text} />
                 <Text style={[styles.rowLabel, { color: c.text }]}>Name</Text>
               </View>
               <TextInput style={[styles.input, { color: c.text }]} value={profile.name} onChangeText={handleNameChange} selectTextOnFocus />
             </View>
             <View style={[styles.row, { borderBottomColor: c.border }]}>
               <View style={styles.rowLeft}>
-                <MaterialIcons name="fitness-center" size={24} color={c.text} />
+                <Ionicons name="fitness-outline" size={22} color={c.text} />
                 <Text style={[styles.rowLabel, { color: c.text }]}>Weight</Text>
               </View>
               <TextInput style={[styles.input, { color: c.text }]} value={profile.weight.toString()} onChangeText={handleWeightChange} keyboardType="numeric" selectTextOnFocus />
             </View>
             <View style={[styles.row, { borderBottomColor: c.border }]}>
               <View style={styles.rowLeft}>
-                <MaterialIcons name="straighten" size={24} color={c.text} />
+                <Ionicons name="resize-outline" size={22} color={c.text} />
                 <Text style={[styles.rowLabel, { color: c.text }]}>Height</Text>
               </View>
               <TextInput style={[styles.input, { color: c.text }]} value={profile.height.toString()} onChangeText={handleHeightChange} keyboardType="numeric" selectTextOnFocus />
             </View>
             <View style={[styles.row, { borderBottomColor: c.border }]}>
               <View style={styles.rowLeft}>
-                <MaterialIcons name="cake" size={24} color={c.text} />
+                <Ionicons name="calendar-outline" size={22} color={c.text} />
                 <Text style={[styles.rowLabel, { color: c.text }]}>Age</Text>
               </View>
               <TextInput style={[styles.input, { color: c.text }]} value={profile.age.toString()} onChangeText={handleAgeChange} keyboardType="numeric" selectTextOnFocus />
             </View>
-        </View>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: c.textTertiary }]}>Goals</Text>
-        <View style={[styles.card, { backgroundColor: c.surface }]}>
-          <View style={[styles.row, { borderBottomColor: c.border }]}>
-            <View style={styles.rowLeft}>
-              <MaterialIcons name="directions-walk" size={24} color={c.text} />
-              <Text style={[styles.rowLabel, { color: c.text }]}>Daily Steps</Text>
-            </View>
-            <TextInput style={[styles.input, { color: c.text }]} value={profile.dailyStepGoal.toString()} onChangeText={handleStepGoalChange} keyboardType="numeric" selectTextOnFocus />
-          </View>
-          <View style={[styles.row, { borderBottomColor: c.border }]}>
-            <View style={styles.rowLeft}>
-              <MaterialIcons name="local-fire-department" size={24} color={c.text} />
-              <Text style={[styles.rowLabel, { color: c.text }]}>Daily Calories</Text>
-            </View>
-            <TextInput style={[styles.input, { color: c.text }]} value={(profile.dailyCalorieGoal || 500).toString()} onChangeText={handleCalorieGoalChange} keyboardType="numeric" selectTextOnFocus />
-          </View>
-          <View style={[styles.row, { borderBottomColor: c.border }]}>
-            <View style={styles.rowLeft}>
-              <MaterialIcons name="monitor-weight" size={24} color={c.text} />
-              <Text style={[styles.rowLabel, { color: c.text }]}>Weight Goal</Text>
-            </View>
-            <TextInput style={[styles.input, { color: c.text }]} value={profile.weightGoal?.toString() || profile.weight.toString()} onChangeText={handleWeightGoalChange} keyboardType="numeric" selectTextOnFocus />
-          </View>
-          <View style={[styles.row, { borderBottomColor: c.border }]}>
-            <View style={styles.rowLeft}>
-              <MaterialIcons name="fitness-center" size={24} color={c.text} />
-              <Text style={[styles.rowLabel, { color: c.text }]}>Weekly Workouts</Text>
-            </View>
-            <TextInput style={[styles.input, { color: c.text }]} value={(profile.weeklyWorkoutGoal || 3).toString()} onChangeText={handleWorkoutGoalChange} keyboardType="numeric" selectTextOnFocus />
           </View>
         </View>
-      </View>
 
-      <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: c.textTertiary }]}>Preferences</Text>
-        <View style={[styles.card, { backgroundColor: c.surface }]}>
-          <View style={[styles.row, { borderBottomColor: c.border }]}>
-            <View style={styles.rowLeft}>
-              <MaterialIcons name="dark-mode" size={24} color={c.text} />
-              <Text style={[styles.rowLabel, { color: c.text }]}>Dark Mode</Text>
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: c.textTertiary }]}>Goals</Text>
+          <View style={[styles.card, { backgroundColor: c.surface }]}>
+            <View style={[styles.row, { borderBottomColor: c.border }]}>
+              <View style={styles.rowLeft}>
+                <Ionicons name="footsteps-outline" size={22} color={c.text} />
+                <Text style={[styles.rowLabel, { color: c.text }]}>Daily Steps</Text>
+              </View>
+              <TextInput style={[styles.input, { color: c.text }]} value={profile.dailyStepGoal.toString()} onChangeText={handleStepGoalChange} keyboardType="numeric" selectTextOnFocus />
             </View>
-            <Switch value={profile.darkMode} onValueChange={handleDarkModeToggle} trackColor={{ false: c.border, true: c.secondary }} thumbColor={c.primary} />
-          </View>
-          <View style={[styles.row, { borderBottomColor: c.border }]}>
-            <View style={styles.rowLeft}>
-              <MaterialIcons name="straighten" size={24} color={c.text} />
-              <Text style={[styles.rowLabel, { color: c.text }]}>Use Metric Units</Text>
+            <View style={[styles.row, { borderBottomColor: c.border }]}>
+              <View style={styles.rowLeft}>
+                <Ionicons name="flame-outline" size={22} color={c.text} />
+                <Text style={[styles.rowLabel, { color: c.text }]}>Daily Calories</Text>
+              </View>
+              <TextInput style={[styles.input, { color: c.text }]} value={(profile.dailyCalorieGoal || 500).toString()} onChangeText={handleCalorieGoalChange} keyboardType="numeric" selectTextOnFocus />
             </View>
-            <Switch value={profile.useMetric} onValueChange={handleMetricToggle} trackColor={{ false: c.border, true: c.secondary }} thumbColor={c.primary} />
+            <View style={[styles.row, { borderBottomColor: c.border }]}>
+              <View style={styles.rowLeft}>
+                <Ionicons name="scale-outline" size={22} color={c.text} />
+                <Text style={[styles.rowLabel, { color: c.text }]}>Weight Goal</Text>
+              </View>
+              <TextInput style={[styles.input, { color: c.text }]} value={(profile.weightGoal || profile.weight).toString()} onChangeText={handleWeightGoalChange} keyboardType="numeric" selectTextOnFocus />
+            </View>
+            <View style={[styles.row, { borderBottomColor: c.border }]}>
+              <View style={styles.rowLeft}>
+                <Ionicons name="barbell-outline" size={22} color={c.text} />
+                <Text style={[styles.rowLabel, { color: c.text }]}>Weekly Workouts</Text>
+              </View>
+              <TextInput style={[styles.input, { color: c.text }]} value={(profile.weeklyWorkoutGoal || 3).toString()} onChangeText={handleWorkoutGoalChange} keyboardType="numeric" selectTextOnFocus />
+            </View>
           </View>
         </View>
-      </View>
 
-      <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: c.textTertiary }]}>Data</Text>
-        <View style={[styles.card, { backgroundColor: c.surface, marginBottom: 12 }]}>
-          <TouchableOpacity style={[styles.row, { borderBottomColor: c.border }]} onPress={handleExportData} disabled={isExporting}>
-            <View style={styles.rowLeft}>
-              <MaterialIcons name="download" size={24} color={c.text} />
-              <Text style={[styles.rowLabel, { color: c.text }]}>Export Data</Text>
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: c.textTertiary }]}>Preferences</Text>
+          <View style={[styles.card, { backgroundColor: c.surface }]}>
+            <View style={[styles.row, { borderBottomColor: c.border }]}>
+              <View style={styles.rowLeft}>
+                <Ionicons name="moon-outline" size={22} color={c.text} />
+                <Text style={[styles.rowLabel, { color: c.text }]}>Dark Mode</Text>
+              </View>
+              <Switch value={profile.darkMode} onValueChange={handleDarkModeToggle} trackColor={{ false: c.border, true: c.secondary }} thumbColor={c.accent} />
             </View>
-            {isExporting ? <ActivityIndicator size="small" color={c.text} /> : <MaterialIcons name="chevron-right" size={24} color={c.textTertiary} />}
+            <View style={[styles.row, { borderBottomColor: c.border }]}>
+              <View style={styles.rowLeft}>
+                <Ionicons name="globe-outline" size={22} color={c.text} />
+                <Text style={[styles.rowLabel, { color: c.text }]}>Use Metric Units</Text>
+              </View>
+              <Switch value={profile.useMetric} onValueChange={handleMetricToggle} trackColor={{ false: c.border, true: c.secondary }} thumbColor={c.accent} />
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: c.textTertiary }]}>Data</Text>
+          <View style={[styles.card, { backgroundColor: c.surface, marginBottom: 12 }]}>
+            <TouchableOpacity style={[styles.row, { borderBottomColor: c.border }]} onPress={handleExportData} disabled={isExporting}>
+              <View style={styles.rowLeft}>
+                <Ionicons name="download-outline" size={22} color={c.text} />
+                <Text style={[styles.rowLabel, { color: c.text }]}>Export Data</Text>
+              </View>
+              {isExporting ? <ActivityIndicator size="small" color={c.accent} /> : <Ionicons name="chevron-forward" size={22} color={c.textTertiary} />}
+            </TouchableOpacity>
+          </View>
+          <TouchableOpacity style={[styles.dangerButton, { backgroundColor: c.error + '15', borderColor: c.error + '30', borderWidth: 1 }]} onPress={handleResetData}>
+            <Ionicons name="trash-outline" size={22} color={c.error} />
+            <Text style={[styles.dangerButtonText, { color: c.error }]}>Reset All Data</Text>
           </TouchableOpacity>
         </View>
-        <TouchableOpacity style={[styles.dangerButton, { backgroundColor: c.surface, borderColor: c.border, borderWidth: 1 }]} onPress={handleResetData}>
-          <MaterialIcons name="delete" size={24} color={c.text} />
-          <Text style={[styles.dangerButtonText, { color: c.text }]}>Reset All Data</Text>
-        </TouchableOpacity>
-      </View>
 
-      <View style={styles.footer}>
-        <Text style={[styles.footerText, { color: c.textTertiary }]}>Nfit v1.0.0</Text>
-        <Text style={[styles.footerText, { color: c.textTertiary }]}>Sensor-driven fitness</Text>
-      </View>
-    </ScrollView>
+        <View style={styles.footer}>
+          <Text style={[styles.footerText, { color: c.textTertiary }]}>Nfit v1.0.2</Text>
+          <Text style={[styles.footerText, { color: c.textTertiary }]}>Sensor-driven fitness</Text>
+        </View>
+      </ScrollView>
     </View>
   );
 }
@@ -278,7 +278,6 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1 },
   rowLeft: { flexDirection: 'row', alignItems: 'center' },
   rowLabel: { fontSize: 16, marginLeft: 12 },
-  rowValue: { fontSize: 16 },
   input: { fontSize: 16, fontWeight: '600', textAlign: 'right', minWidth: 80 },
   dangerButton: { borderRadius: 12, padding: 16, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' },
   dangerButtonText: { fontSize: 16, fontWeight: '600', marginLeft: 8 },

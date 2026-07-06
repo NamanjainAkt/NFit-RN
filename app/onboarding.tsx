@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
-import { MaterialIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { useUserStore } from '../store/userStore';
 import { getColors } from '../utils/theme';
 
@@ -33,22 +33,22 @@ export default function OnboardingScreen() {
       return;
     }
 
-    setProfile({ 
-      name, 
-      weight: w, 
-      height: h, 
-      age: a, 
-      dailyStepGoal: g || 10000, 
+    setProfile({
+      name,
+      weight: w,
+      height: h,
+      age: a,
+      dailyStepGoal: g || 10000,
       dailyCalorieGoal: 500,
       weightGoal: w,
       weeklyWorkoutGoal: 3,
-      useMetric, 
-      darkMode 
+      useMetric,
+      darkMode
     });
     router.replace('/(tabs)');
   };
 
-  const isInvalid = !name || !weight || !height || !age || 
+  const isInvalid = !name || !weight || !height || !age ||
                     !validateField(weight, 500) ||
                     !validateField(height, 300) ||
                     !validateField(age, 150);
@@ -58,44 +58,79 @@ export default function OnboardingScreen() {
 
   return (
     <KeyboardAvoidingView style={[styles.container, { backgroundColor: c.background }]} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <View style={styles.header}>
-          <MaterialIcons name="fitness-center" size={48} color={c.text} />
+          <View style={[styles.logoBg, { backgroundColor: c.accent + '20' }]}>
+            <Ionicons name="fitness" size={48} color={c.accent} />
+          </View>
           <Text style={[styles.title, { color: c.text }]}>Welcome to Nfit</Text>
           <Text style={[styles.subtitle, { color: c.textTertiary }]}>Let's set up your fitness profile</Text>
         </View>
         <View style={styles.form}>
           <View style={styles.inputGroup}>
             <Text style={[styles.label, { color: c.textSecondary }]}>Your Name</Text>
-            <TextInput style={[styles.input, { backgroundColor: c.surface, borderColor: c.border, color: c.text }]} value={name} onChangeText={setName} placeholder="Enter your name" placeholderTextColor={c.textTertiary} />
+            <TextInput
+              style={[styles.input, { backgroundColor: c.surface, borderColor: c.border, color: c.text }]}
+              value={name} onChangeText={setName}
+              placeholder="Enter your name" placeholderTextColor={c.textTertiary}
+            />
           </View>
           <View style={styles.inputGroup}>
             <Text style={[styles.label, { color: c.textSecondary }]}>Weight ({weightUnit})</Text>
-            <TextInput style={[styles.input, { backgroundColor: c.surface, borderColor: c.border, color: c.text }]} value={weight} onChangeText={setWeight} placeholder={useMetric ? "70" : "154"} keyboardType="numeric" placeholderTextColor={c.textTertiary} />
+            <TextInput
+              style={[styles.input, { backgroundColor: c.surface, borderColor: c.border, color: c.text }]}
+              value={weight} onChangeText={setWeight}
+              placeholder={useMetric ? "70" : "154"} keyboardType="numeric"
+              placeholderTextColor={c.textTertiary}
+            />
           </View>
           <View style={styles.inputGroup}>
             <Text style={[styles.label, { color: c.textSecondary }]}>Height ({heightUnit})</Text>
-            <TextInput style={[styles.input, { backgroundColor: c.surface, borderColor: c.border, color: c.text }]} value={height} onChangeText={setHeight} placeholder={useMetric ? "170" : "67"} keyboardType="numeric" placeholderTextColor={c.textTertiary} />
+            <TextInput
+              style={[styles.input, { backgroundColor: c.surface, borderColor: c.border, color: c.text }]}
+              value={height} onChangeText={setHeight}
+              placeholder={useMetric ? "170" : "67"} keyboardType="numeric"
+              placeholderTextColor={c.textTertiary}
+            />
           </View>
           <View style={styles.inputGroup}>
             <Text style={[styles.label, { color: c.textSecondary }]}>Age</Text>
-            <TextInput style={[styles.input, { backgroundColor: c.surface, borderColor: c.border, color: c.text }]} value={age} onChangeText={setAge} placeholder="25" keyboardType="numeric" placeholderTextColor={c.textTertiary} />
+            <TextInput
+              style={[styles.input, { backgroundColor: c.surface, borderColor: c.border, color: c.text }]}
+              value={age} onChangeText={setAge}
+              placeholder="25" keyboardType="numeric"
+              placeholderTextColor={c.textTertiary}
+            />
           </View>
           <View style={styles.inputGroup}>
             <Text style={[styles.label, { color: c.textSecondary }]}>Daily Step Goal</Text>
-            <TextInput style={[styles.input, { backgroundColor: c.surface, borderColor: c.border, color: c.text }]} value={dailyStepGoal} onChangeText={setDailyStepGoal} placeholder="10000" keyboardType="numeric" placeholderTextColor={c.textTertiary} />
+            <TextInput
+              style={[styles.input, { backgroundColor: c.surface, borderColor: c.border, color: c.text }]}
+              value={dailyStepGoal} onChangeText={setDailyStepGoal}
+              placeholder="10000" keyboardType="numeric"
+              placeholderTextColor={c.textTertiary}
+            />
           </View>
           <View style={[styles.toggleGroup, { backgroundColor: c.border }]}>
-            <TouchableOpacity style={[styles.toggleButton, useMetric && { backgroundColor: c.background }]} onPress={() => setUseMetric(true)}>
-              <Text style={[styles.toggleText, { color: useMetric ? c.text : c.textTertiary }]}>Metric (kg/cm)</Text>
+            <TouchableOpacity
+              style={[styles.toggleButton, useMetric && { backgroundColor: c.background }]}
+              onPress={() => setUseMetric(true)}
+            >
+              <Text style={[styles.toggleText, { color: useMetric ? c.accent : c.textTertiary }]}>Metric (kg/cm)</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.toggleButton, !useMetric && { backgroundColor: c.background }]} onPress={() => setUseMetric(false)}>
-              <Text style={[styles.toggleText, { color: !useMetric ? c.text : c.textTertiary }]}>Imperial (lbs/in)</Text>
+            <TouchableOpacity
+              style={[styles.toggleButton, !useMetric && { backgroundColor: c.background }]}
+              onPress={() => setUseMetric(false)}
+            >
+              <Text style={[styles.toggleText, { color: !useMetric ? c.accent : c.textTertiary }]}>Imperial (lbs/in)</Text>
             </TouchableOpacity>
           </View>
         </View>
-        <TouchableOpacity style={[styles.button, { backgroundColor: c.text }, isInvalid && { backgroundColor: c.textTertiary }]} onPress={handleComplete} disabled={isInvalid}>
-          <Text style={[styles.buttonText, { color: c.background }]}>Get Started</Text>
+        <TouchableOpacity
+          style={[styles.button, { backgroundColor: c.accent }, isInvalid && { backgroundColor: c.textTertiary }]}
+          onPress={handleComplete} disabled={isInvalid}
+        >
+          <Text style={[styles.buttonText, { color: '#FFFFFF' }]}>Get Started</Text>
         </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -106,7 +141,8 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollContent: { flexGrow: 1, padding: 24, paddingTop: 60 },
   header: { marginBottom: 32, alignItems: 'center' },
-  title: { fontSize: 32, fontWeight: 'bold', marginTop: 16, marginBottom: 8 },
+  logoBg: { width: 80, height: 80, borderRadius: 40, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
+  title: { fontSize: 32, fontWeight: 'bold', marginBottom: 8 },
   subtitle: { fontSize: 16 },
   form: { flex: 1 },
   inputGroup: { marginBottom: 20 },
