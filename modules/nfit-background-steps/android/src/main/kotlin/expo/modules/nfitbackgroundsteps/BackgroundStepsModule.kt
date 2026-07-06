@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.SharedPreferences
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
+import expo.modules.kotlin.modules.ModuleDefinitionData
 
 class BackgroundStepsModule : Module() {
   private val prefs: SharedPreferences
@@ -12,17 +13,18 @@ class BackgroundStepsModule : Module() {
       it.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     } ?: throw IllegalStateException("React context not available")
 
-  override fun definition(): ModuleDefinition = ModuleDefinition {
+  override fun definition(): ModuleDefinitionData = ModuleDefinition {
     Name("NfitBackgroundSteps")
 
     Events("onStepsUpdate")
 
     OnCreate {
       StepTrackerService.setCurrentListener(this@BackgroundStepsModule)
-      val ctx = appContext.reactContext ?: return@OnCreate
-      val steps = prefs.getInt(KEY_ACCUMULATED_STEPS, 0)
-      if (steps > 0) {
-        sendEvent("onStepsUpdate", mapOf("steps" to steps))
+      appContext.reactContext?.let { ctx ->
+        val steps = ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getInt(KEY_ACCUMULATED_STEPS, 0)
+        if (steps > 0) {
+          sendEvent("onStepsUpdate", mapOf("steps" to steps))
+        }
       }
     }
 
@@ -31,17 +33,19 @@ class BackgroundStepsModule : Module() {
     }
 
     AsyncFunction("startService") {
-      val ctx = appContext.reactContext ?: return@AsyncFunction
-      ctx.startForegroundService(Intent(ctx, StepTrackerService::class.java))
+      appContext.reactContext?.let { ctx ->
+        ctx.startForegroundService(Intent(ctx, StepTrackerService::class.java))
+      }
     }
 
     AsyncFunction("stopService") {
-      val ctx = appContext.reactContext ?: return@AsyncFunction
-      ctx.stopService(Intent(ctx, StepTrackerService::class.java))
+      appContext.reactContext?.let { ctx ->
+        ctx.stopService(Intent(ctx, StepTrackerService::class.java))
+      }
     }
 
     AsyncFunction("getAccumulatedSteps") {
-      return@AsyncFunction prefs.getInt(KEY_ACCUMULATED_STEPS, 0)
+      prefs.getInt(KEY_ACCUMULATED_STEPS, 0)
     }
   }
 

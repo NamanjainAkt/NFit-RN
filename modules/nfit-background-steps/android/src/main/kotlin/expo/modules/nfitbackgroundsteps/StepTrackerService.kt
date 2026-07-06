@@ -70,7 +70,7 @@ class StepTrackerService : Service(), SensorEventListener {
     lastSensorTotal = p.getFloat(KEY_LAST_SENSOR_TOTAL, 0f)
     stepGoal = p.getInt("step_goal", 10000)
     stepCalories = p.getInt("step_calories", 0)
-    stepDistance = p.getFloat("step_distance", 0.0).toDouble()
+    stepDistance = p.getFloat("step_distance", 0.0f).toDouble()
     stepStreak = p.getInt("step_streak", 0)
     stepFloors = p.getInt("step_floors", 0)
     stepActiveMinutes = p.getInt("step_active_minutes", 0)

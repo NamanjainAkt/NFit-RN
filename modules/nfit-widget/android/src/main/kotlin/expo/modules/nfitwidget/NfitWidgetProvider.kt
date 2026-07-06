@@ -7,6 +7,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import android.content.res.ColorStateList
 import android.os.Build
 import android.widget.RemoteViews
 
@@ -66,7 +67,7 @@ class NfitWidgetProvider : AppWidgetProvider() {
         KEY_STEPS to prefs.getInt(KEY_STEPS, 0),
         KEY_GOAL to prefs.getInt(KEY_GOAL, 10000),
         KEY_CALORIES to prefs.getInt(KEY_CALORIES, 0),
-        KEY_DISTANCE to prefs.getFloat(KEY_DISTANCE, 0.0).toDouble(),
+        KEY_DISTANCE to prefs.getFloat(KEY_DISTANCE, 0.0f).toDouble(),
         KEY_STREAK to prefs.getInt(KEY_STREAK, 0),
         KEY_FLOORS to prefs.getInt(KEY_FLOORS, 0),
         KEY_ACTIVE_MINUTES to prefs.getInt(KEY_ACTIVE_MINUTES, 0),
@@ -83,7 +84,7 @@ class NfitWidgetProvider : AppWidgetProvider() {
       val steps = prefs.getInt(KEY_STEPS, 0)
       val goal = prefs.getInt(KEY_GOAL, 10000)
       val calories = prefs.getInt(KEY_CALORIES, 0)
-      val distance = prefs.getFloat(KEY_DISTANCE, 0.0)
+      val distance = prefs.getFloat(KEY_DISTANCE, 0.0f)
       val streak = prefs.getInt(KEY_STREAK, 0)
       val floors = prefs.getInt(KEY_FLOORS, 0)
       val activeMinutes = prefs.getInt(KEY_ACTIVE_MINUTES, 0)
@@ -116,9 +117,11 @@ class NfitWidgetProvider : AppWidgetProvider() {
           else -> android.graphics.Color.parseColor("#F44336")            // Red
         }
 
-        // Set progress tint
-        views.setInt(R.id.progress_bar, "setProgressTintList",
-          android.content.res.ColorStateList.valueOf(progressColor))
+        // Set progress tint (API 29+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+          views.setColorStateList(R.id.progress_bar, "setProgressTintList",
+            ColorStateList.valueOf(progressColor))
+        }
 
         // Goal reached animation color for steps
         if (progress >= 100) {

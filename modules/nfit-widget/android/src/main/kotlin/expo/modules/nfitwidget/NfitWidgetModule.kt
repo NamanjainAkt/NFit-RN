@@ -2,34 +2,38 @@ package expo.modules.nfitwidget
 
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
+import expo.modules.kotlin.modules.ModuleDefinitionData
 
 class NfitWidgetModule : Module() {
-  override fun definition(): ModuleDefinition = ModuleDefinition {
+  override fun definition(): ModuleDefinitionData = ModuleDefinition {
     Name("NfitWidget")
 
     AsyncFunction("updateWidget") {
-      val ctx = appContext.reactContext ?: return@AsyncFunction
-      NfitWidgetProvider.triggerRefresh(ctx)
+      appContext.reactContext?.let { ctx ->
+        NfitWidgetProvider.triggerRefresh(ctx)
+      }
     }
 
     AsyncFunction("updateWidgetData") { args: WidgetDataArgs ->
-      val ctx = appContext.reactContext ?: return@AsyncFunction
-      NfitWidgetProvider.updateData(
-        ctx,
-        args.steps,
-        args.goal,
-        args.calories,
-        args.distance,
-        args.streak,
-        args.floors,
-        args.activeMinutes,
-        args.distanceUnit
-      )
+      appContext.reactContext?.let { ctx ->
+        NfitWidgetProvider.updateData(
+          ctx,
+          args.steps,
+          args.goal,
+          args.calories,
+          args.distance,
+          args.streak,
+          args.floors,
+          args.activeMinutes,
+          args.distanceUnit
+        )
+      }
     }
 
     AsyncFunction("getWidgetData") {
-      val ctx = appContext.reactContext ?: return@AsyncFunction
-      return@AsyncFunction NfitWidgetProvider.readData(ctx)
+      appContext.reactContext?.let { ctx ->
+        NfitWidgetProvider.readData(ctx)
+      }
     }
   }
 }
