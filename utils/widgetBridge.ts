@@ -12,10 +12,12 @@ function getWidgetModule() {
   if (!NfitWidget) {
     try {
       NfitWidget = requireNativeModule('NfitWidget');
-    } catch {
+    } catch (e) {
+      console.warn('[widgetBridge] requireNativeModule failed:', e);
       try {
         NfitWidget = require('expo-modules-core').NativeModulesProxy.NfitWidget;
-      } catch {
+      } catch (e2) {
+        console.warn('[widgetBridge] NativeModulesProxy fallback failed:', e2);
         NfitWidget = null;
       }
     }
@@ -53,7 +55,7 @@ export async function refreshWidget(): Promise<boolean> {
 
     const widget = getWidgetModule();
     if (widget?.updateWidgetData) {
-      await widget.updateWidgetData({
+      const data = {
         steps: todaySteps,
         goal: profile.dailyStepGoal || 10000,
         calories,
@@ -62,18 +64,24 @@ export async function refreshWidget(): Promise<boolean> {
         floors: todayFloors,
         activeMinutes: todayActiveMinutes,
         distanceUnit,
-      });
+      };
+      console.log('[widgetBridge] calling updateWidgetData with:', data);
+      await widget.updateWidgetData(data);
       return true;
+    } else {
+      console.warn('[widgetBridge] widget module or updateWidgetData not available');
     }
 
     // Fallback: just trigger refresh
     if (widget?.updateWidget) {
+      console.log('[widgetBridge] calling updateWidget fallback');
       await widget.updateWidget();
       return true;
     }
 
     return false;
-  } catch {
+  } catch (e) {
+    console.error('[widgetBridge] refreshWidget failed:', e);
     return false;
   }
 }

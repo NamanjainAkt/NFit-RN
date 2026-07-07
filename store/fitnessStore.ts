@@ -4,6 +4,7 @@ import { format } from 'date-fns';
 import { zustandStorage } from '../utils/storage';
 import { calculateCalories, calculateDistance } from '../utils/calculations';
 import { useUserStore } from './userStore';
+import { saveDailySteps } from '../utils/database';
 
 export interface DailySteps {
   date: string;
@@ -46,6 +47,32 @@ function debouncedWidgetRefresh() {
   }, 2000);
 }
 
+// Debounced SQLite persistence for daily_steps table
+let dbSaveTimeout: ReturnType<typeof setTimeout> | null = null;
+
+function debouncedDbSave() {
+  if (dbSaveTimeout) clearTimeout(dbSaveTimeout);
+  dbSaveTimeout = setTimeout(() => {
+    try {
+      const { todaySteps, todayFloors, todayActiveMinutes } = useFitnessStore.getState();
+      const profile = useUserStore.getState().profile;
+      const calories = profile ? calculateCalories(todaySteps, profile.weight, profile.useMetric) : 0;
+      const distance = profile ? calculateDistance(todaySteps, profile.height, profile.useMetric) : 0;
+      const today = format(new Date(), 'yyyy-MM-dd');
+      saveDailySteps({
+        date: today,
+        steps: todaySteps,
+        floors: todayFloors,
+        activeMinutes: todayActiveMinutes,
+        calories,
+        distance,
+      }).catch(() => {});
+    } catch {
+      // DB not ready yet
+    }
+  }, 3000);
+}
+
 export const useFitnessStore = create<FitnessState>()(
   persist(
     (set, get) => ({
@@ -58,6 +85,7 @@ export const useFitnessStore = create<FitnessState>()(
         set({ todaySteps: steps });
         get().syncTodayWithHistory();
         debouncedWidgetRefresh();
+        debouncedDbSave();
       },
       syncTodayWithHistory: () => {
         const { todaySteps, todayFloors, todayActiveMinutes, recordDay } = get();

@@ -9,6 +9,14 @@ import * as Notifications from 'expo-notifications';
 export default function OnboardingScreen() {
   const router = useRouter();
   const setProfile = useUserStore((state) => state.setProfile);
+  const hasCompletedOnboarding = useUserStore((state) => state.hasCompletedOnboarding);
+
+  useEffect(() => {
+    if (hasCompletedOnboarding) {
+      router.replace('/(tabs)');
+    }
+  }, [hasCompletedOnboarding]);
+
   const [name, setName] = useState('');
   const [weight, setWeight] = useState('');
   const [height, setHeight] = useState('');

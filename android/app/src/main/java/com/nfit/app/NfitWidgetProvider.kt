@@ -72,62 +72,63 @@ class NfitWidgetProvider : AppWidgetProvider() {
       val layoutId = context.resources.getIdentifier("nfit_widget", "layout", context.packageName)
       if (layoutId == 0) return
 
-      for (appWidgetId in appWidgetIds) {
-        val views = RemoteViews(context.packageName, layoutId)
-        val stepsId = resourceId(context, "steps_text")
-        val progressTextId = resourceId(context, "progress_text")
-        val percentageId = resourceId(context, "percentage_text")
-        val progressBarId = resourceId(context, "progress_bar")
-        val caloriesId = resourceId(context, "calories_text")
-        val distanceId = resourceId(context, "distance_text")
-        val streakId = resourceId(context, "streak_text")
-        val floorsId = resourceId(context, "floors_text")
-        val activeMinId = resourceId(context, "active_minutes_text")
-        val containerId = resourceId(context, "widget_container")
+      val views = RemoteViews(context.packageName, layoutId)
+      val stepsId = resourceId(context, "steps_text")
+      val progressTextId = resourceId(context, "progress_text")
+      val percentageId = resourceId(context, "percentage_text")
+      val progressBarId = resourceId(context, "progress_bar")
+      val caloriesId = resourceId(context, "calories_text")
+      val distanceId = resourceId(context, "distance_text")
+      val streakId = resourceId(context, "streak_text")
+      val floorsId = resourceId(context, "floors_text")
+      val activeMinId = resourceId(context, "active_minutes_text")
+      val containerId = resourceId(context, "widget_container")
 
-        if (stepsId != 0) views.setTextViewText(stepsId, steps.toFormattedString())
-        if (progressTextId != 0) views.setTextViewText(progressTextId, "$steps / ${goal.toFormattedString()}")
-        if (percentageId != 0) views.setTextViewText(percentageId, "$progress%")
-        if (progressBarId != 0) views.setProgressBar(progressBarId, 100, progress, false)
-        if (caloriesId != 0) views.setTextViewText(caloriesId, calories.toFormattedString())
-        if (distanceId != 0) views.setTextViewText(distanceId, String.format("%.1f %s", distance, distanceUnit))
-        if (streakId != 0) views.setTextViewText(streakId, "$streak")
-        if (floorsId != 0) views.setTextViewText(floorsId, "$floors")
-        if (activeMinId != 0) views.setTextViewText(activeMinId, "$activeMinutes")
+      if (stepsId != 0) views.setTextViewText(stepsId, steps.toFormattedString())
+      if (progressTextId != 0) views.setTextViewText(progressTextId, "$steps / ${goal.toFormattedString()}")
+      if (percentageId != 0) views.setTextViewText(percentageId, "$progress%")
+      if (progressBarId != 0) views.setProgressBar(progressBarId, 100, progress, false)
+      if (caloriesId != 0) views.setTextViewText(caloriesId, calories.toFormattedString())
+      if (distanceId != 0) views.setTextViewText(distanceId, String.format("%.1f %s", distance, distanceUnit))
+      if (streakId != 0) views.setTextViewText(streakId, "$streak")
+      if (floorsId != 0) views.setTextViewText(floorsId, "$floors")
+      if (activeMinId != 0) views.setTextViewText(activeMinId, "$activeMinutes")
 
-        if (progressBarId != 0 && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-          val progressColor = when {
-            progress >= 100 -> android.graphics.Color.parseColor("#4CAF50")
-            progress >= 75 -> android.graphics.Color.parseColor("#8BC34A")
-            progress >= 50 -> android.graphics.Color.parseColor("#FFC107")
-            progress >= 25 -> android.graphics.Color.parseColor("#FF9800")
-            else -> android.graphics.Color.parseColor("#F44336")
-          }
-          views.setColorStateList(progressBarId, "setProgressTintList",
-            ColorStateList.valueOf(progressColor))
+      if (progressBarId != 0 && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        val progressColor = when {
+          progress >= 100 -> android.graphics.Color.parseColor("#4CAF50")
+          progress >= 75 -> android.graphics.Color.parseColor("#8BC34A")
+          progress >= 50 -> android.graphics.Color.parseColor("#FFC107")
+          progress >= 25 -> android.graphics.Color.parseColor("#FF9800")
+          else -> android.graphics.Color.parseColor("#F44336")
         }
-
-        if (stepsId != 0) {
-          views.setTextColor(stepsId, if (progress >= 100)
-            android.graphics.Color.parseColor("#4CAF50")
-          else
-            android.graphics.Color.parseColor("#FFFFFF"))
-        }
-
-        if (containerId != 0) {
-          val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)
-          if (launchIntent != null) {
-            val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
-              PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-            else
-              PendingIntent.FLAG_UPDATE_CURRENT
-            val pi = PendingIntent.getActivity(context, 0, launchIntent, flags)
-            views.setOnClickPendingIntent(containerId, pi)
-          }
-        }
-
-        appWidgetManager.updateAppWidget(appWidgetId, views)
+        views.setColorStateList(progressBarId, "setProgressTintList",
+          ColorStateList.valueOf(progressColor))
       }
+
+      if (stepsId != 0) {
+        views.setTextColor(stepsId, if (progress >= 100)
+          android.graphics.Color.parseColor("#4CAF50")
+        else
+          android.graphics.Color.parseColor("#FFFFFF"))
+      }
+
+      if (containerId != 0) {
+        val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)
+        if (launchIntent != null) {
+          val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+          else
+            PendingIntent.FLAG_UPDATE_CURRENT
+          val pi = PendingIntent.getActivity(context, 0, launchIntent, flags)
+          views.setOnClickPendingIntent(containerId, pi)
+        }
+      }
+
+      // Use ComponentName overload to update ALL widget instances atomically.
+      // This bypasses per-instance RemoteViews caching that many launchers apply.
+      val componentName = ComponentName(context, NfitWidgetProvider::class.java)
+      appWidgetManager.updateAppWidget(componentName, views)
     }
 
     private fun resourceId(context: Context, name: String): Int {

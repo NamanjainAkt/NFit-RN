@@ -28,6 +28,8 @@ export default function HomeScreen() {
   const [confettiKey, setConfettiKey] = useState(0);
   const prevGoalRef = useRef(false);
 
+  const insets = useSafeAreaInsets();
+
   useEffect(() => {
     if (stats?.goalReached && !prevGoalRef.current) {
       setConfettiKey((k) => k + 1);
@@ -59,7 +61,6 @@ export default function HomeScreen() {
 
   const { profile, todaySteps, todayFloors, todayActiveMinutes, stepStreak, calories, distance, distanceUnit, goal, goalReached } = stats;
   const { isSimulated, pulseAnim } = stepTracker;
-  const insets = useSafeAreaInsets();
   const darkMode = profile?.darkMode ?? false;
   const c = getColors(darkMode);
 
