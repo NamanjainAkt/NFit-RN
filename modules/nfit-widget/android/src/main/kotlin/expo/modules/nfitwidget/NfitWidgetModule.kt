@@ -134,7 +134,14 @@ class NfitWidgetModule : Module() {
     views.setTextViewText(resId(context, "floors_text"), "$floors")
     views.setTextViewText(resId(context, "active_minutes_text"), "$activeMinutes")
 
-    // Progress bar tint
+    // Goal-reached badge visibility
+    val goalReachedId = resId(context, "goal_reached_badge")
+    if (goalReachedId != 0) {
+      views.setInt(goalReachedId, "setVisibility",
+        if (progress >= 100) android.view.View.VISIBLE else android.view.View.GONE)
+    }
+
+    // Progress bar tint and height
     val pbarId = resId(context, "progress_bar")
     if (pbarId != 0 && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
       val tint = when {
@@ -147,7 +154,7 @@ class NfitWidgetModule : Module() {
       views.setColorStateList(pbarId, "setProgressTintList", ColorStateList.valueOf(tint))
     }
 
-    // Goal-reached color
+    // Goal-reached color for steps text
     val sId = resId(context, "steps_text")
     if (sId != 0) {
       views.setTextColor(sId, if (progress >= 100)

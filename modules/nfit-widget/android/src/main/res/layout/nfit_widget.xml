@@ -5,126 +5,167 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:gravity="center_vertical"
-    android:padding="16dp"
+    android:padding="20dp"
     android:background="@drawable/widget_background">
 
-    <!-- Main Steps Row -->
+    <!-- Header Row: Steps Label + Streak Badge -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical">
 
-        <LinearLayout
+        <TextView
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:orientation="vertical"
-            android:gravity="center_vertical">
+            android:text="STEPS TODAY"
+            android:textSize="9sp"
+            android:textColor="#8A8A9E"
+            android:fontFamily="sans-serif-medium"
+            android:letterSpacing="0.12" />
 
-            <TextView
-                android:id="@+id/steps_text"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="0"
-                android:textSize="42sp"
-                android:textColor="#FFFFFF"
-                android:fontFamily="sans-serif-medium"
-                android:letterSpacing="0.02"
-                android:includeFontPadding="false" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="STEPS"
-                android:textSize="10sp"
-                android:textColor="#9E9E9E"
-                android:fontFamily="sans-serif"
-                android:letterSpacing="0.08"
-                android:layout_marginTop="-2dp" />
-
-        </LinearLayout>
-
-        <!-- Streak Badge -->
         <LinearLayout
+            android:id="@+id/streak_container"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center"
-            android:paddingHorizontal="12dp"
-            android:paddingVertical="6dp"
+            android:paddingHorizontal="10dp"
+            android:paddingVertical="4dp"
             android:background="@drawable/badge_streak">
+
+            <TextView
+                android:id="@+id/streak_fire"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🔥"
+                android:textSize="12sp"
+                android:includeFontPadding="false" />
 
             <TextView
                 android:id="@+id/streak_text"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="0"
-                android:textSize="16sp"
-                android:textColor="#FF9800"
+                android:textSize="14sp"
+                android:textColor="#FFB74D"
                 android:fontFamily="sans-serif-medium"
+                android:layout_marginStart="4dp"
                 android:includeFontPadding="false" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="d"
-                android:textSize="11sp"
-                android:textColor="#FF9800"
+                android:textSize="10sp"
+                android:textColor="#FFB74D"
                 android:fontFamily="sans-serif"
-                android:layout_marginStart="2dp" />
+                android:layout_marginStart="1dp"
+                android:includeFontPadding="false" />
 
         </LinearLayout>
 
     </LinearLayout>
 
-    <!-- Progress Bar -->
-    <ProgressBar
-        android:id="@+id/progress_bar"
-        style="?android:attr/progressBarStyleHorizontal"
-        android:layout_width="match_parent"
-        android:layout_height="5dp"
-        android:layout_marginTop="12dp"
-        android:max="100"
-        android:progress="0"
-        android:progressDrawable="@drawable/widget_progress" />
+    <!-- Hero Steps Count -->
+    <TextView
+        android:id="@+id/steps_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="0"
+        android:textSize="48sp"
+        android:textColor="#FFFFFF"
+        android:fontFamily="sans-serif-medium"
+        android:letterSpacing="0.01"
+        android:layout_marginTop="4dp"
+        android:includeFontPadding="false" />
 
-    <!-- Progress Text Row -->
+    <!-- Goal Reached Badge (shown when progress >= 100) -->
+    <LinearLayout
+        android:id="@+id/goal_reached_badge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:paddingHorizontal="12dp"
+        android:paddingVertical="4dp"
+        android:background="@drawable/badge_goal_reached"
+        android:visibility="gone">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="✓"
+            android:textSize="12sp"
+            android:textColor="#4CAF50"
+            android:fontFamily="sans-serif-medium" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="GOAL REACHED"
+            android:textSize="9sp"
+            android:textColor="#4CAF50"
+            android:fontFamily="sans-serif-medium"
+            android:letterSpacing="0.08"
+            android:layout_marginStart="4dp" />
+
+    </LinearLayout>
+
+    <!-- Progress Section -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="3dp"
-        android:orientation="horizontal"
-        android:gravity="center_vertical">
+        android:layout_marginTop="12dp"
+        android:orientation="vertical">
 
-        <TextView
-            android:id="@+id/progress_text"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="0 / 10,000"
-            android:textSize="10sp"
-            android:textColor="#9E9E9E"
-            android:fontFamily="sans-serif" />
+        <ProgressBar
+            android:id="@+id/progress_bar"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="8dp"
+            android:max="100"
+            android:progress="0"
+            android:progressDrawable="@drawable/widget_progress" />
 
-        <TextView
-            android:id="@+id/percentage_text"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="0%"
-            android:textSize="11sp"
-            android:textColor="#B0B0B0"
-            android:fontFamily="sans-serif-medium" />
+            android:layout_marginTop="4dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/progress_text"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="0 / 10,000"
+                android:textSize="10sp"
+                android:textColor="#7A7A8E"
+                android:fontFamily="sans-serif" />
+
+            <TextView
+                android:id="@+id/percentage_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0%"
+                android:textSize="12sp"
+                android:textColor="#9A9AB0"
+                android:fontFamily="sans-serif-medium" />
+
+        </LinearLayout>
 
     </LinearLayout>
 
     <!-- Divider -->
-    <TextView
+    <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:background="#2A2A2A"
+        android:background="@drawable/divider_widget"
         android:layout_marginTop="10dp"
-        android:layout_marginBottom="8dp" />
+        android:layout_marginBottom="10dp" />
 
     <!-- Secondary Metrics Row -->
     <LinearLayout
@@ -147,7 +188,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="0"
-                android:textSize="14sp"
+                android:textSize="15sp"
                 android:textColor="#FF6B6B"
                 android:fontFamily="sans-serif-medium"
                 android:includeFontPadding="false" />
@@ -157,9 +198,9 @@
                 android:layout_height="wrap_content"
                 android:text="CAL"
                 android:textSize="8sp"
-                android:textColor="#707070"
-                android:fontFamily="sans-serif"
-                android:letterSpacing="0.06"
+                android:textColor="#6A6A7E"
+                android:fontFamily="sans-serif-medium"
+                android:letterSpacing="0.08"
                 android:layout_marginTop="1dp" />
 
         </LinearLayout>
@@ -177,7 +218,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="0.0 km"
-                android:textSize="14sp"
+                android:textSize="15sp"
                 android:textColor="#64B5F6"
                 android:fontFamily="sans-serif-medium"
                 android:includeFontPadding="false" />
@@ -187,9 +228,9 @@
                 android:layout_height="wrap_content"
                 android:text="DIST"
                 android:textSize="8sp"
-                android:textColor="#707070"
-                android:fontFamily="sans-serif"
-                android:letterSpacing="0.06"
+                android:textColor="#6A6A7E"
+                android:fontFamily="sans-serif-medium"
+                android:letterSpacing="0.08"
                 android:layout_marginTop="1dp" />
 
         </LinearLayout>
@@ -207,7 +248,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="0"
-                android:textSize="14sp"
+                android:textSize="15sp"
                 android:textColor="#81C784"
                 android:fontFamily="sans-serif-medium"
                 android:includeFontPadding="false" />
@@ -217,9 +258,9 @@
                 android:layout_height="wrap_content"
                 android:text="FLR"
                 android:textSize="8sp"
-                android:textColor="#707070"
-                android:fontFamily="sans-serif"
-                android:letterSpacing="0.06"
+                android:textColor="#6A6A7E"
+                android:fontFamily="sans-serif-medium"
+                android:letterSpacing="0.08"
                 android:layout_marginTop="1dp" />
 
         </LinearLayout>
@@ -237,7 +278,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="0"
-                android:textSize="14sp"
+                android:textSize="15sp"
                 android:textColor="#CE93D8"
                 android:fontFamily="sans-serif-medium"
                 android:includeFontPadding="false" />
@@ -247,9 +288,9 @@
                 android:layout_height="wrap_content"
                 android:text="MIN"
                 android:textSize="8sp"
-                android:textColor="#707070"
-                android:fontFamily="sans-serif"
-                android:letterSpacing="0.06"
+                android:textColor="#6A6A7E"
+                android:fontFamily="sans-serif-medium"
+                android:letterSpacing="0.08"
                 android:layout_marginTop="1dp" />
 
         </LinearLayout>

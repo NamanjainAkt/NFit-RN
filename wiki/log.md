@@ -2,6 +2,20 @@
 
 Append-only chronological record. Format: `## [YYYY-MM-DD] action | subject`
 
+## [2026-07-11] fix | Streak only increments on goal reached + widget redesign
+
+Fixed streak incorrectly incrementing on every step instead of only when
+daily goal is reached. Redesigned Android widget with Material 3 aesthetic.
+
+Changes:
+- `store/userStore.ts` — `updateStepStreak` now takes `goalReached: boolean`
+- `hooks/useStepTracker.ts` — removed streak calls from pedometer callback
+  and simulation; added `updateStepStreak` to the goal-notification effect
+- `modules/nfit-widget/` — redesigned layout with hero step count, fire streak
+  badge, goal-reached badge, better typography, deeper background gradient,
+  improved progress bar and metrics styling
+- `android/app/.../NfitWidgetProvider.kt` — updated for new layout elements
+
 ## [2026-07-11] fix | Step persistence on app restart
 
 Fixed step counter resetting to 0 on app restart. Two root causes:

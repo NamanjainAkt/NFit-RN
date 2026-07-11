@@ -46,11 +46,6 @@ export function useStepTracker() {
     setTodaySteps(simulatedSteps);
     setTodayFloors(Math.floor(simulatedSteps / 200));
     setTodayActiveMinutes(Math.floor(simulatedSteps / 100));
-
-    // Update streak for simulated steps too
-    if (simulatedSteps > 0) {
-      updateStepStreak(format(new Date(), 'yyyy-MM-dd'));
-    }
   };
 
   // ── Main setup: restore persisted steps + start pedometer ──
@@ -126,11 +121,6 @@ export function useStepTracker() {
             setTodayFloors(totalFloors);
             setTodayActiveMinutes(totalActiveMinutes);
 
-            // Update streak on any step activity
-            if (totalSteps > 0) {
-              updateStepStreak(format(new Date(), 'yyyy-MM-dd'));
-            }
-
             // Persist accumulated step counter state
             saveStepCounterState(totalSteps).catch(() => {});
 
@@ -178,6 +168,7 @@ export function useStepTracker() {
       if (progress >= 1 && !goalNotified) {
         setGoalNotified(true);
         sendGoalReachedNotification(todaySteps);
+        updateStepStreak(format(new Date(), 'yyyy-MM-dd'), true);
 
         if (stepStreak > 0 && stepStreak % 7 === 0) {
           sendStreakNotification(stepStreak);

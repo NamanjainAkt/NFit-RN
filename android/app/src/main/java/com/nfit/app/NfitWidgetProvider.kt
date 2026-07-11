@@ -82,6 +82,7 @@ class NfitWidgetProvider : AppWidgetProvider() {
       val streakId = resourceId(context, "streak_text")
       val floorsId = resourceId(context, "floors_text")
       val activeMinId = resourceId(context, "active_minutes_text")
+      val goalReachedId = resourceId(context, "goal_reached_badge")
       val containerId = resourceId(context, "widget_container")
 
       if (stepsId != 0) views.setTextViewText(stepsId, steps.toFormattedString())
@@ -93,6 +94,10 @@ class NfitWidgetProvider : AppWidgetProvider() {
       if (streakId != 0) views.setTextViewText(streakId, "$streak")
       if (floorsId != 0) views.setTextViewText(floorsId, "$floors")
       if (activeMinId != 0) views.setTextViewText(activeMinId, "$activeMinutes")
+      if (goalReachedId != 0) {
+        views.setInt(goalReachedId, "setVisibility",
+          if (progress >= 100) android.view.View.VISIBLE else android.view.View.GONE)
+      }
 
       if (progressBarId != 0 && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         val progressColor = when {

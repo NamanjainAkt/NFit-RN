@@ -25,8 +25,8 @@ Central hook that manages step counting: restores baseline from SQLite, subscrib
 2. **Start pedometer**: Checks `Pedometer.isAvailableAsync()`, requests permissions, subscribes via `watchStepCount()`.
 3. **Step accumulation**: `data.steps` (since subscription) is added to the restored baseline. Prevents losing steps on app restart.
 4. **Widget sync**: Notifies widget every 50 steps via `refreshWidget()`.
-5. **Streak update**: Calls `updateStepStreak()` on any step activity.
-6. **Goal reached**: When progress >= 1 and not yet notified: sends notification, triggers pulse animation (3 loops), sends streak notification if streak % 7 == 0.
+5. **Streak update**: Calls `updateStepStreak()` with `goalReached=true` inside the goal notification effect — only when daily goal is first met.
+6. **Goal reached**: When progress >= 1 and not yet notified: sends notification, updates streak, triggers pulse animation (3 loops), sends streak notification if streak % 7 == 0.
 
 ## Simulation
 When pedometer is unavailable or permission denied: generates random steps (1000-6000), floors (steps/200), active minutes (steps/100).

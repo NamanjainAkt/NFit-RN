@@ -40,7 +40,7 @@ interface UserState {
   workoutGoals: WorkoutGoal[];
   setProfile: (profile: UserProfile) => void;
   setHasCompletedOnboarding: (value: boolean) => void;
-  updateStepStreak: (today: string) => void;
+  updateStepStreak: (today: string, goalReached: boolean) => void;
   updateProfile: (updates: Partial<UserProfile>) => void;
   addWorkout: (workout: Omit<Workout, 'id' | 'date'>) => void;
   removeWorkout: (id: string) => void;
@@ -60,10 +60,12 @@ export const useUserStore = create<UserState>()(
       workoutGoals: [],
       setProfile: (profile) => set({ profile, hasCompletedOnboarding: true }),
       setHasCompletedOnboarding: (value) => set({ hasCompletedOnboarding: value }),
-      updateStepStreak: (today) => {
+      updateStepStreak: (today, goalReached) => {
+        if (!goalReached) return;
+
         const { lastActiveDate, stepStreak } = get();
         const todayDate = parseISO(today);
-        
+
         if (!lastActiveDate) {
           set({ stepStreak: 1, lastActiveDate: today });
           return;
@@ -73,7 +75,6 @@ export const useUserStore = create<UserState>()(
         const yesterday = subDays(todayDate, 1);
 
         if (isSameDay(lastDate, todayDate)) {
-          // Already active today, do nothing
           return;
         }
 
