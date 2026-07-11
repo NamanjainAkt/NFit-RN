@@ -103,9 +103,9 @@ class NfitWidgetProvider : AppWidgetProvider() {
         val progressColor = when {
           progress >= 100 -> android.graphics.Color.parseColor("#4CAF50")
           progress >= 75 -> android.graphics.Color.parseColor("#8BC34A")
-          progress >= 50 -> android.graphics.Color.parseColor("#FFC107")
-          progress >= 25 -> android.graphics.Color.parseColor("#FF9800")
-          else -> android.graphics.Color.parseColor("#F44336")
+          progress >= 50 -> android.graphics.Color.parseColor("#FDD835")
+          progress >= 25 -> android.graphics.Color.parseColor("#FB8C00")
+          else -> android.graphics.Color.parseColor("#EF5350")
         }
         views.setColorStateList(progressBarId, "setProgressTintList",
           ColorStateList.valueOf(progressColor))
