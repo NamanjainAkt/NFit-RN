@@ -6,13 +6,14 @@
 Waits for Zustand hydration, wraps the entire app in an `ErrorBoundary`, sets the status bar style based on dark mode, and defines the root Stack navigator.
 
 ## Key Behavior
-- **Hydration gate**: Returns `null` until `useUserStore.persist.hasHydrated()` resolves. Listens via `onFinishHydration` listener.
+- **Hydration gate**: Returns `null` until both `userStore` AND `fitnessStore` have rehydrated. Listens via `onFinishHydration` listeners on both stores.
 - **Dark mode**: Reads `profile?.darkMode` from userStore. Background color switches between `#121212` (dark) and `#F8F9FA` (light).
 - **ErrorBoundary**: Wraps all children. On error shows a red alert icon + "Try Again" button.
 - **Screens**: `(tabs)` (headerless) and `onboarding` (fullScreenModal, slide_from_bottom).
 
 ## Dependencies
 - [[user-store]] — hydration state, darkMode
+- [[fitness-store]] — hydration state (must be rehydrated before step tracker reads stepHistory)
 - [[error-boundary]] — error boundary component
 
 ## Notes

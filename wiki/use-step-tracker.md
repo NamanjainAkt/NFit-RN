@@ -21,7 +21,7 @@ Central hook that manages step counting: restores baseline from SQLite, subscrib
 ```
 
 ## Flow
-1. **Restore baseline**: Loads today's steps from SQLite via `loadDailyStepsForDate()`. Falls back to Zustand `stepHistory` if SQLite fails.
+1. **Restore baseline**: Loads today's steps from SQLite via `loadDailyStepsForDate()`. Falls back to Zustand `stepHistory` if SQLite returns null (debounced save hadn't fired) or throws.
 2. **Start pedometer**: Checks `Pedometer.isAvailableAsync()`, requests permissions, subscribes via `watchStepCount()`.
 3. **Step accumulation**: `data.steps` (since subscription) is added to the restored baseline. Prevents losing steps on app restart.
 4. **Widget sync**: Notifies widget every 50 steps via `refreshWidget()`.

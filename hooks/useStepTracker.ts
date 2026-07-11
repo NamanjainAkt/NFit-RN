@@ -67,15 +67,8 @@ export function useStepTracker() {
         let baselineFloors = 0;
         let baselineActiveMinutes = 0;
 
-        try {
-          const saved = await loadDailyStepsForDate(today);
-          if (saved && saved.steps > 0) {
-            baselineSteps = saved.steps;
-            baselineFloors = saved.floors;
-            baselineActiveMinutes = saved.activeMinutes;
-          }
-        } catch {
-          // SQLite may not be ready; fall back to Zustand stepHistory
+        // Helper: fall back to Zustand's persisted stepHistory (rehydrated from app_state)
+        const restoreFromHistory = () => {
           const { stepHistory } = useFitnessStore.getState();
           const todayEntry = stepHistory.find((d) => d.date === today);
           if (todayEntry && todayEntry.steps > 0) {
@@ -83,6 +76,22 @@ export function useStepTracker() {
             baselineFloors = todayEntry.floors;
             baselineActiveMinutes = todayEntry.activeMinutes;
           }
+        };
+
+        try {
+          const saved = await loadDailyStepsForDate(today);
+          if (saved && saved.steps > 0) {
+            baselineSteps = saved.steps;
+            baselineFloors = saved.floors;
+            baselineActiveMinutes = saved.activeMinutes;
+          } else {
+            // No SQLite row (debounced save hadn't fired before last kill);
+            // fall back to Zustand stepHistory which was persisted synchronously
+            restoreFromHistory();
+          }
+        } catch {
+          // SQLite not ready; fall back to Zustand stepHistory
+          restoreFromHistory();
         }
 
         // Apply restored baseline immediately so UI shows saved data
