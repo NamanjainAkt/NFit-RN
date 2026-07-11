@@ -16,6 +16,17 @@ Changes:
   improved progress bar and metrics styling
 - `android/app/.../NfitWidgetProvider.kt` — updated for new layout elements
 
+## [2026-07-11] style | Refine widget to Pixel / Material 3 minimal aesthetic
+
+Updated widget drawables and layout to match Pixel/NothingOS/Apple Health style:
+- Background: subtle gradient #191C22→#15171C, 8% opacity border, no glow
+- Badges: solid #232323 streak pill (18dp radius), transparent goal badge (no fill)
+- Colors: muted Material accents (EF5350, 42A5F5, 66BB6A, AB47BC)
+- Typography: hero 46sp, labels #7E848F / #8B9099 / #9AA0A6
+- Divider: 30% opacity #2A2D36
+- Progress tints: EF5350→FB8C00→FDD835→8BC34A→4CAF50
+- Removed all gradients, glow, gaming aesthetic; flat + spacious
+
 ## [2026-07-11] fix | Step persistence on app restart
 
 Fixed step counter resetting to 0 on app restart. Two root causes:
