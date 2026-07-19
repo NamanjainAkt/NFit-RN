@@ -40,7 +40,7 @@ class StepTrackerWorker(
 
       if (currentTotal > lastTotal) {
         val delta = (currentTotal - lastTotal).toInt()
-        if (delta > 0 && delta < 1000) {
+        if (delta > 0 && delta < 5000) {
           val newAccumulated = accumulated + delta
           prefs.edit()
             .putInt(KEY_ACCUMULATED_STEPS, newAccumulated)

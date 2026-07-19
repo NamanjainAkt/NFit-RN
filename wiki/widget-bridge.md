@@ -13,8 +13,8 @@ Reads current state from stores, calculates calories/distance/streak, calls `upd
 ### `getWidgetData()`
 Reads widget data from native storage. Android-only.
 
-### `startBackgroundService()` / `stopBackgroundService()`
-Controls the foreground service for background step tracking. Delegates to `NfitBackgroundSteps.startService()`/`stopService()`.
+### `getAccumulatedSteps()`
+Reads accumulated steps from WorkManager background tracking. Returns the total steps recorded while the app was closed. Delegates to `NfitBackgroundSteps.getAccumulatedSteps()`. Android-only; returns 0 on other platforms.
 
 ### `pushDataToWidget()`
 Alias for `refreshWidget()`.

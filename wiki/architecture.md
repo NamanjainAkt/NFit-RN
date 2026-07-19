@@ -32,7 +32,7 @@
 ┌─────────────────────────────────────────────┐
 │            Native Layer (Android)            │
 │  nfit-widget        nfit-background-steps    │
-│  (Home Widget)      (FG Service + WorkMgr)  │
+│  (Home Widget)      (WorkManager 15min)     │
 └─────────────────────────────────────────────┘
 ```
 
@@ -42,10 +42,13 @@
 `app/_layout.tsx` defines root Stack. `app/(tabs)/_layout.tsx` defines 5-tab navigator. Each `.tsx` file in `app/(tabs)/` is a screen.
 
 ### Dual Storage
-All Zustand persistence goes through `zustandStorage` adapter which tries SQLite first, falls back to AsyncStorage. The `daily_steps` table is also written directly by the fitness store (debounced 3s) for the widget/background service to read.
+All Zustand persistence goes through `zustandStorage` adapter which tries SQLite first, falls back to AsyncStorage. The `daily_steps` table is also written directly by the fitness store (debounced 3s) for the widget to read.
+
+### Hybrid Background Tracking
+Background step tracking uses WorkManager (every 15 min) reading the hardware TYPE_STEP_COUNTER sensor. On app start, JS reads the WorkManager-accumulated total as baseline via native bridge. When app is open, JS Pedometer provides real-time increments. No foreground service, no wakelock, no persistent notification.
 
 ### Native Module Bridge
-`widgetBridge.ts` lazily loads native modules via `requireNativeModule()` with fallback to `NativeModulesProxy`. The JS side pushes data; the native side renders widgets and runs foreground services.
+`widgetBridge.ts` lazily loads native modules via `requireNativeModule()` with fallback to `NativeModulesProxy`. JS pushes widget data and reads WorkManager accumulated steps from native side.
 
 ### Custom Hooks
 `useStepTracker` and `useFitnessStats` extract business logic from screens. The home screen is a thin rendering layer.
@@ -53,3 +56,4 @@ All Zustand persistence goes through `zustandStorage` adapter which tries SQLite
 ## Related Pages
 - [[data-flow]] — detailed step data flow
 - [[dual-storage]] — storage strategy details
+- [[nfit-background-steps]] — WorkManager background tracking

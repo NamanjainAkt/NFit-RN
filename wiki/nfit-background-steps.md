@@ -1,26 +1,31 @@
 # Nfit Background Steps (Native Module)
 
-> `modules/nfit-background-steps/` | Android background step tracking
+> `modules/nfit-background-steps/` | Android background step tracking via WorkManager
 
 ## Purpose
-Runs a foreground service to continuously track steps even when the app is backgrounded or killed.
+Tracks steps when the app is closed by reading the hardware `TYPE_STEP_COUNTER` sensor periodically via WorkManager. The accumulated total is exposed to JS on app start so steps taken while closed are never lost.
 
-## Architecture
-- **BackgroundStepsModule.kt** — Expo module with `startService()`/`stopService()` methods
-- **StepTrackerService.kt** — Foreground service using `Pedometer` sensor
-- **StepTrackerWorker.kt** — WorkManager periodic task for persistent tracking
-- **BootReceiver.kt** — BroadcastReceiver to restart service on device boot
+## Architecture (Hybrid)
+- **BackgroundTracking** — WorkManager periodic task every 15 min reads the sensor, computes delta, saves to SharedPrefs
+- **BackgroundStepsModule.kt** — Minimal Expo module exposing `getAccumulatedSteps()` to JS
 
-## Permissions Used
-- `FOREGROUND_SERVICE` — foreground service
-- `FOREGROUND_SERVICE_HEALTH` — health data foreground service
-- `RECEIVE_BOOT_COMPLETED` — auto-restart on boot
-- `WAKE_LOCK` — prevent CPU sleep during tracking
+No foreground service. No wakelock. No persistent notification.
 
-## Configuration
-- `expo-module.config.json` — module registration
-- `android/build.gradle` — AAR build config
+## How It Works
+```
+App closed → WorkManager wakes every 15 min (200ms CPU)
+           → Reads TYPE_STEP_COUNTER (hardware, monotonic)
+           → Computes delta from last known total
+           → Adds delta to accumulated steps
+           → Saves to SharedPrefs (nfit_background_steps)
+           → CPU sleeps
+
+App opens  → JS calls native getAccumulatedSteps()
+           → Uses result as baseline + pedometer incremental
+           → Steps taken while closed are fully recovered
+```
 
 ## Dependencies
-- [[widget-bridge]] — JS-side bridge (`startBackgroundService`/`stopBackgroundService`)
-- [[use-step-tracker]] — controls service start/stop
+- [[widget-bridge]] — JS-side bridge (`getAccumulatedSteps`)
+- [[use-step-tracker]] — reads accumulated steps on startup
+- `androidx.work:work-runtime-ktx` — WorkManager

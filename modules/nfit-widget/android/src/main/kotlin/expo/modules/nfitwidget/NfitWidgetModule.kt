@@ -75,7 +75,7 @@ class NfitWidgetModule : Module() {
       .putInt("widget_floors", args.floors)
       .putInt("widget_active_minutes", args.activeMinutes)
       .putString("widget_distance_unit", args.distanceUnit)
-      .commit()
+      .apply()
   }
 
   private fun readPrefs(context: Context): Map<String, Any> {

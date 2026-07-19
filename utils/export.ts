@@ -1,4 +1,4 @@
-import * as FileSystem from 'expo-file-system/legacy';
+import * as FileSystem from 'expo-file-system';
 import Sharing from 'expo-sharing';
 import { DailySteps } from '../store/fitnessStore';
 import { Workout } from '../store/userStore';
@@ -34,7 +34,7 @@ export function exportToCSV(stepHistory: DailySteps[]): string {
 export function exportWorkoutsToCSV(workouts: Workout[]): string {
   const headers = 'Date,Type,Duration (min),Calories,Notes\n';
   const rows = workouts
-    .map((w) => `${w.date},${w.type},${w.duration},${w.calories},"${w.notes || ''}"`)
+    .map((w) => `${w.date},${w.type},${w.duration},${w.calories},"${(w.notes || '').replace(/"/g, '""')}"`)
     .join('\n');
   return headers + rows;
 }

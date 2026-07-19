@@ -177,7 +177,83 @@ Nfit/
 
 ---
 
-## 8. Wiki Maintenance Checklist
+## 8. Production Build (Android APK)
+
+### Known Pitfalls
+
+#### 1. Missing gradle-wrapper.jar
+The `android/gradle/` directory is gitignored (`/android/gradle/` in `.gitignore`). After any `git checkout` that restores the `android/` directory, the gradle wrapper files will be missing:
+```
+Error: Unable to access jarfile android/gradle/wrapper/gradle-wrapper.jar
+```
+**Fix**: Download the wrapper jar from the Gradle GitHub tag:
+```powershell
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/gradle/gradle/v9.0.0/gradle/wrapper/gradle-wrapper.jar" -OutFile "android\gradle\wrapper\gradle-wrapper.jar"
+```
+Also create `android/gradle/wrapper/gradle-wrapper.properties` pointing to the correct distribution.
+
+#### 2. AAPT2 Daemon Crash (`:expo:verifyReleaseResources`)
+The `expo` module's `verifyReleaseResources` task can fail with an AAPT2 daemon crash:
+```
+AAPT2 aapt2-8.12.0-... Daemon #N: Unexpected error during link
+```
+This is caused by running `assembleRelease` (whole-project) instead of `:app:assembleRelease` (app-only). The Expo module isn't designed to be built as a standalone application.
+
+**Fix**: Always scope the build to the app module:
+```powershell
+cd android; ./gradlew :app:assembleRelease
+```
+
+#### 3. AAPT2 "Unknown chunk type '200'" / Process Unexpectedly Exits
+When compileSdkVersion >= 34, resource linking can fail with:
+```
+aapt2.exe LoadedArsc.cpp:657] Unknown chunk type '200'
+```
+Causes include:
+- Resource filenames with uppercase letters or special chars
+- `android:background="@android:drawable/..."` referencing private resources in XML
+- Outdated AGP (Android Gradle Plugin) version
+- `implementation 'androidx.legacy:legacy-support-v4:1.0.0'` in dependencies
+
+**Fix**: 
+- Upgrade AGP (in `android/build.gradle`) and Gradle wrapper version
+- Replace `@android:drawable/` references with local drawables
+- Ensure all resource filenames are lowercase
+- Run `cd android; ./gradlew clean` before retrying
+
+#### 4. npm install --legacy-peer-deps Breaks Expo Version
+Running `npm install --legacy-peer-deps` can resolve completely wrong Expo SDK versions (e.g. 46.x instead of 55.x), causing build failures.
+
+**Fix**: Delete `node_modules/` and reinstall without `--legacy-peer-deps`:
+```powershell
+Remove-Item -Recurse -Force node_modules
+npm install
+```
+
+### Build Workflow
+
+1. **Ensure deps are correct**:
+   ```powershell
+   npm install
+   ```
+2. **Restore gradle wrapper** (if missing):
+   ```powershell
+   New-Item -ItemType Directory -Path "android\gradle\wrapper" -Force
+   Invoke-WebRequest -Uri "https://raw.githubusercontent.com/gradle/gradle/v9.0.0/gradle/wrapper/gradle-wrapper.jar" -OutFile "android\gradle\wrapper\gradle-wrapper.jar"
+   ```
+3. **Build**:
+   ```powershell
+   cd android; ./gradlew :app:assembleRelease
+   ```
+4. **Output**: `android/app/build/outputs/apk/release/app-release.apk`
+5. **If AAPT2 fails**: retry once (often transient). If persistent, clean build caches:
+   ```powershell
+   cd android; ./gradlew clean; ./gradlew :app:assembleRelease
+   ```
+
+---
+
+## 9. Wiki Maintenance Checklist
 
 After any code change, ask:
 - [ ] Did I update the affected wiki entity page(s)?

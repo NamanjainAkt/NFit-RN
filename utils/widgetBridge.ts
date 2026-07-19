@@ -104,38 +104,20 @@ export async function getWidgetData(): Promise<Record<string, any> | null> {
 }
 
 /**
- * Start background step tracking service
+ * Get accumulated steps from WorkManager background tracking.
+ * Returns the total steps recorded while app was closed.
  */
-export async function startBackgroundService(): Promise<boolean> {
-  if (Platform.OS !== 'android') return false;
+export async function getAccumulatedSteps(): Promise<number> {
+  if (Platform.OS !== 'android') return 0;
 
   try {
     const bg = getBackgroundStepsModule();
-    if (bg?.startService) {
-      await bg.startService();
-      return true;
+    if (bg?.getAccumulatedSteps) {
+      return await bg.getAccumulatedSteps();
     }
-    return false;
+    return 0;
   } catch {
-    return false;
-  }
-}
-
-/**
- * Stop background step tracking service
- */
-export async function stopBackgroundService(): Promise<boolean> {
-  if (Platform.OS !== 'android') return false;
-
-  try {
-    const bg = getBackgroundStepsModule();
-    if (bg?.stopService) {
-      await bg.stopService();
-      return true;
-    }
-    return false;
-  } catch {
-    return false;
+    return 0;
   }
 }
 

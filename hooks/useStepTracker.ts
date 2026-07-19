@@ -6,7 +6,7 @@ import { useUserStore } from '../store/userStore';
 import { useFitnessStore } from '../store/fitnessStore';
 import { loadDailyStepsForDate, saveDailySteps, saveStepCounterState } from '../utils/database';
 import { sendGoalReachedNotification, sendStreakNotification } from '../utils/notifications';
-import { refreshWidget, startBackgroundService, stopBackgroundService as stopBg } from '../utils/widgetBridge';
+import { refreshWidget, getAccumulatedSteps } from '../utils/widgetBridge';
 
 export function useStepTracker() {
   const profile = useUserStore((state) => state.profile);
@@ -22,7 +22,6 @@ export function useStepTracker() {
 
   const [isSimulated, setIsSimulated] = useState(false);
   const [goalNotified, setGoalNotified] = useState(false);
-  const [isBackgroundTracking, setIsBackgroundTracking] = useState(false);
   const progressAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const profileRef = useRef(profile);
@@ -89,6 +88,23 @@ export function useStepTracker() {
           restoreFromHistory();
         }
 
+        // 2. Try to get WorkManager's accumulated steps (captures steps taken while app was closed)
+        const preBgSteps = baselineSteps;
+        const preBgFloors = baselineFloors;
+        const preBgActiveMinutes = baselineActiveMinutes;
+        try {
+          const bgSteps = await getAccumulatedSteps();
+          if (bgSteps > baselineSteps) {
+            baselineSteps = bgSteps;
+            // Also restore floors/activeMinutes proportionally
+            const ratio = preBgSteps > 0 ? baselineSteps / preBgSteps : 1;
+            baselineFloors = Math.round(preBgFloors * ratio);
+            baselineActiveMinutes = Math.round(preBgActiveMinutes * ratio);
+          }
+        } catch {
+          // Native module not available — use SQLite/Zustand baseline as-is
+        }
+
         // Apply restored baseline immediately so UI shows saved data
         if (mounted) {
           setTodaySteps(baselineSteps);
@@ -97,7 +113,7 @@ export function useStepTracker() {
           notifyWidget(baselineSteps);
         }
 
-        // 2. Start pedometer subscription
+        // 3. Start pedometer subscription
         const available = await Pedometer.isAvailableAsync();
         if (!available) {
           if (mounted) simulateSteps();
@@ -191,24 +207,6 @@ export function useStepTracker() {
     }
   }, [todaySteps, profile]);
 
-  const startBackgroundTracking = async () => {
-    try {
-      await startBackgroundService();
-      setIsBackgroundTracking(true);
-    } catch {
-      // Fallback to foreground tracking
-    }
-  };
-
-  const stopBackgroundTracking = async () => {
-    try {
-      await stopBg();
-      setIsBackgroundTracking(false);
-    } catch {
-      // Fallback
-    }
-  };
-
   return {
     todaySteps,
     isSimulated,
@@ -216,8 +214,5 @@ export function useStepTracker() {
     pulseAnim,
     goal: profile?.dailyStepGoal || 10000,
     goalReached: todaySteps >= (profile?.dailyStepGoal || 10000),
-    isBackgroundTracking,
-    startBackgroundTracking,
-    stopBackgroundTracking,
   };
 }

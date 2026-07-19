@@ -44,14 +44,14 @@ Nfit is a React Native / Expo fitness tracking app (v1.2.1) that counts steps vi
 | [[notifications]] | `utils/notifications.ts` | Permission request, channels (default/reminders/achievements), goal/streak/daily notifications |
 | [[theme]] | `utils/theme.ts` | Light/dark color palettes, spacing tokens, `getColors(darkMode)` |
 | [[export]] | `utils/export.ts` | JSON/CSV export of step history + workouts via expo-sharing |
-| [[widget-bridge]] | `utils/widgetBridge.ts` | Native module bridge: refreshWidget, startBackgroundService, stopBackgroundService |
+| [[widget-bridge]] | `utils/widgetBridge.ts` | Native module bridge: refreshWidget, getWidgetData, getAccumulatedSteps, pushDataToWidget |
 
 ## Native Modules (modules/)
 
 | Page | File | Summary |
 |------|------|---------|
 | [[nfit-widget]] | `modules/nfit-widget/` | Android home screen widget: RemoteViews, AppWidgetProvider, Kotlin native module |
-| [[nfit-background-steps]] | `modules/nfit-background-steps/` | Android background step tracking: ForegroundService, WorkManager, BootReceiver |
+| [[nfit-background-steps]] | `modules/nfit-background-steps/` | Android background step tracking: WorkManager (15min), no foreground service |
 
 ## Components (components/)
 
