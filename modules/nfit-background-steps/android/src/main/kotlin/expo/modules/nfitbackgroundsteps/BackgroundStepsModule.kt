@@ -18,6 +18,10 @@ class BackgroundStepsModule : Module() {
     AsyncFunction("getAccumulatedSteps") {
       prefs.getInt(KEY_ACCUMULATED_STEPS, 0)
     }
+
+    AsyncFunction("resetAccumulatedSteps") {
+      prefs.edit().putInt(KEY_ACCUMULATED_STEPS, 0).apply()
+    }
   }
 
   companion object {

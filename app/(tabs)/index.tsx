@@ -9,7 +9,7 @@ import { useStepTracker } from '../../hooks/useStepTracker';
 import { useFitnessStats } from '../../hooks/useFitnessStats';
 import { getColors } from '../../utils/theme';
 import { format } from 'date-fns';
-import { requestNotificationPermissions, scheduleDailyReminder } from '../../utils/notifications';
+import { requestNotificationPermissions, scheduleHourlyReminders } from '../../utils/notifications';
 
 const { width } = Dimensions.get('window');
 const RING_SIZE = width * 0.6;
@@ -43,7 +43,7 @@ export default function HomeScreen() {
 
   useEffect(() => {
     requestNotificationPermissions();
-    scheduleDailyReminder(20, 0);
+    scheduleHourlyReminders();
   }, []);
 
   useEffect(() => {
@@ -131,7 +131,7 @@ export default function HomeScreen() {
           <View style={[styles.statIconBg, { backgroundColor: c.streak + '20' }]}>
             <MaterialCommunityIcons name="fire" size={20} color={c.streak} />
           </View>
-          <Text style={[styles.statValue, { color: c.text }]}>{stepStreak}</Text>
+          <Text style={[styles.statValue, { color: c.text }]}>{stepStreak >= 2 ? stepStreak : 0}</Text>
           <Text style={[styles.statLabel, { color: c.textTertiary }]}>streak</Text>
         </View>
       </View>

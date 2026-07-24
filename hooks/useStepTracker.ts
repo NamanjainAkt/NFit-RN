@@ -1,12 +1,14 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Animated } from 'react-native';
-import { Pedometer } from 'expo-sensors';
+import { Pedometer, Accelerometer } from 'expo-sensors';
 import { format } from 'date-fns';
+import { StepDetector } from '../utils/stepDetector';
 import { useUserStore } from '../store/userStore';
 import { useFitnessStore } from '../store/fitnessStore';
-import { loadDailyStepsForDate, saveDailySteps, saveStepCounterState } from '../utils/database';
+import { loadDailyStepsForDate, saveStepCounterState } from '../utils/database';
 import { sendGoalReachedNotification, sendStreakNotification } from '../utils/notifications';
-import { refreshWidget, getAccumulatedSteps } from '../utils/widgetBridge';
+import { refreshWidget, getAccumulatedSteps, resetAccumulatedSteps } from '../utils/widgetBridge';
+import { createStepFilterState, processStepDelta } from '../utils/stepFilter';
 
 export function useStepTracker() {
   const profile = useUserStore((state) => state.profile);
@@ -56,12 +58,10 @@ export function useStepTracker() {
       try {
         const today = format(new Date(), 'yyyy-MM-dd');
 
-        // 1. Restore today's persisted steps from SQLite as baseline
         let baselineSteps = 0;
         let baselineFloors = 0;
         let baselineActiveMinutes = 0;
 
-        // Helper: fall back to Zustand's persisted stepHistory (rehydrated from app_state)
         const restoreFromHistory = () => {
           const { stepHistory } = useFitnessStore.getState();
           const todayEntry = stepHistory.find((d) => d.date === today);
@@ -79,33 +79,28 @@ export function useStepTracker() {
             baselineFloors = saved.floors;
             baselineActiveMinutes = saved.activeMinutes;
           } else {
-            // No SQLite row (debounced save hadn't fired before last kill);
-            // fall back to Zustand stepHistory which was persisted synchronously
             restoreFromHistory();
           }
         } catch {
-          // SQLite not ready; fall back to Zustand stepHistory
           restoreFromHistory();
         }
 
-        // 2. Try to get WorkManager's accumulated steps (captures steps taken while app was closed)
         const preBgSteps = baselineSteps;
         const preBgFloors = baselineFloors;
         const preBgActiveMinutes = baselineActiveMinutes;
         try {
           const bgSteps = await getAccumulatedSteps();
-          if (bgSteps > baselineSteps) {
-            baselineSteps = bgSteps;
-            // Also restore floors/activeMinutes proportionally
-            const ratio = preBgSteps > 0 ? baselineSteps / preBgSteps : 1;
-            baselineFloors = Math.round(preBgFloors * ratio);
-            baselineActiveMinutes = Math.round(preBgActiveMinutes * ratio);
+          if (bgSteps > 0) {
+            baselineSteps += bgSteps;
+            const addedFloors = Math.floor(bgSteps / 200);
+            const addedMinutes = Math.floor(bgSteps / 100);
+            baselineFloors += addedFloors;
+            baselineActiveMinutes += addedMinutes;
+            await resetAccumulatedSteps();
           }
         } catch {
-          // Native module not available — use SQLite/Zustand baseline as-is
         }
 
-        // Apply restored baseline immediately so UI shows saved data
         if (mounted) {
           setTodaySteps(baselineSteps);
           setTodayFloors(baselineFloors);
@@ -113,39 +108,85 @@ export function useStepTracker() {
           notifyWidget(baselineSteps);
         }
 
-        // 3. Start pedometer subscription
         const available = await Pedometer.isAvailableAsync();
         if (!available) {
           if (mounted) simulateSteps();
           return;
         }
 
-        const result = await Pedometer.requestPermissionsAsync();
-        if (result.granted) {
+        const accAvailable = await Accelerometer.isAvailableAsync();
+        const permResult = await Pedometer.requestPermissionsAsync();
+        
+        if (permResult.granted) {
           let lastWidgetNotifySteps = baselineSteps;
+          
+          if (accAvailable) {
+            // Use robust accelerometer StepDetector in foreground
+            Accelerometer.setUpdateInterval(50); // 20Hz
+            const detector = new StepDetector({}, (count) => {
+              if (!mounted) return;
+              
+              // Only process positive deltas
+              const sessionDelta = count - (detector as any).sessionSteps;
+              if (sessionDelta > 0) {
+                (detector as any).sessionSteps = count;
+                const totalSteps = stepsRef.current + sessionDelta;
+                const totalFloors = Math.floor(totalSteps / 200);
+                const totalActiveMinutes = Math.floor(totalSteps / 100);
 
-          subscription = Pedometer.watchStepCount((data) => {
-            if (!mounted) return;
+                setTodaySteps(totalSteps);
+                setTodayFloors(totalFloors);
+                setTodayActiveMinutes(totalActiveMinutes);
 
-            // data.steps = steps accumulated since subscription started (NOT daily total).
-            // Add on top of the restored baseline so we don't lose pre-restart steps.
-            const totalSteps = baselineSteps + data.steps;
-            const totalFloors = baselineFloors + Math.floor(data.steps / 200);
-            const totalActiveMinutes = baselineActiveMinutes + Math.floor(data.steps / 100);
+                saveStepCounterState(totalSteps).catch(() => {});
 
-            setTodaySteps(totalSteps);
-            setTodayFloors(totalFloors);
-            setTodayActiveMinutes(totalActiveMinutes);
+                if (totalSteps - lastWidgetNotifySteps >= 50) {
+                  notifyWidget(totalSteps);
+                  lastWidgetNotifySteps = totalSteps;
+                }
+              }
+            });
+            (detector as any).sessionSteps = 0;
 
-            // Persist accumulated step counter state
-            saveStepCounterState(totalSteps).catch(() => {});
+            subscription = Accelerometer.addListener(({ x, y, z }) => {
+              detector.addSample({
+                x: x * 9.81,
+                y: y * 9.81,
+                z: z * 9.81,
+                timestamp: Date.now(),
+              });
+            });
+          } else {
+            // Fallback to naive pedometer watch
+            let filterState = createStepFilterState();
+            subscription = Pedometer.watchStepCount((data) => {
+              if (!mounted) return;
 
-            // Sync to widget every 50 steps to avoid excessive updates
-            if (totalSteps - lastWidgetNotifySteps >= 50) {
-              notifyWidget(totalSteps);
-              lastWidgetNotifySteps = totalSteps;
-            }
-          });
+              const { newState, acceptedDelta } = processStepDelta(
+                filterState,
+                data.steps,
+                Date.now()
+              );
+              filterState = newState;
+
+              if (acceptedDelta <= 0) return;
+
+              const totalSteps = stepsRef.current + acceptedDelta;
+              const totalFloors = Math.floor(totalSteps / 200);
+              const totalActiveMinutes = Math.floor(totalSteps / 100);
+
+              setTodaySteps(totalSteps);
+              setTodayFloors(totalFloors);
+              setTodayActiveMinutes(totalActiveMinutes);
+
+              saveStepCounterState(totalSteps).catch(() => {});
+
+              if (totalSteps - lastWidgetNotifySteps >= 50) {
+                notifyWidget(totalSteps);
+                lastWidgetNotifySteps = totalSteps;
+              }
+            });
+          }
         } else {
           if (mounted) simulateSteps();
         }
@@ -186,7 +227,7 @@ export function useStepTracker() {
         sendGoalReachedNotification(todaySteps);
         updateStepStreak(format(new Date(), 'yyyy-MM-dd'), true);
 
-        if (stepStreak > 0 && stepStreak % 7 === 0) {
+        if ((stepStreak + 1) % 7 === 0) {
           sendStreakNotification(stepStreak);
         }
 

@@ -31,7 +31,7 @@ Nfit is a React Native / Expo fitness tracking app (v1.2.1) that counts steps vi
 
 | Page | File | Summary |
 |------|------|---------|
-| [[use-step-tracker]] | `hooks/useStepTracker.ts` | Pedometer subscription, baseline restore from SQLite, widget sync, goal notifications, pulse animation |
+| [[use-step-tracker]] | `hooks/useStepTracker.ts` | Dual-mode step tracking: accelerometer StepDetector (primary), pedometer + cadence filter (fallback). Baseline restore, widget sync, goal notifications |
 | [[use-fitness-stats]] | `hooks/useFitnessStats.ts` | Derived stats: calories, distance, goal progress from today's data |
 
 ## Utilities (utils/)
@@ -41,16 +41,24 @@ Nfit is a React Native / Expo fitness tracking app (v1.2.1) that counts steps vi
 | [[calculations]] | `utils/calculations.ts` | `calculateCalories(steps, weight, useMetric)`, `calculateDistance(steps, height, useMetric)` |
 | [[database]] | `utils/database.ts` | SQLite schema (daily_steps, step_counter_state, workouts, profile, app_state), CRUD operations |
 | [[storage]] | `utils/storage.ts` | Zustand storage adapter: SQLite primary, AsyncStorage fallback |
-| [[notifications]] | `utils/notifications.ts` | Permission request, channels (default/reminders/achievements), goal/streak/daily notifications |
+| [[notifications]] | `utils/notifications.ts` | Permission request, channels (default/reminders/achievements), goal/streak, hourly reminders 8am-8pm |
 | [[theme]] | `utils/theme.ts` | Light/dark color palettes, spacing tokens, `getColors(darkMode)` |
 | [[export]] | `utils/export.ts` | JSON/CSV export of step history + workouts via expo-sharing |
-| [[widget-bridge]] | `utils/widgetBridge.ts` | Native module bridge: refreshWidget, getWidgetData, getAccumulatedSteps, pushDataToWidget |
+| [[widget-bridge]] | `utils/widgetBridge.ts` | Widget update + background step bridge |
+| [[step-detector]] | `utils/stepDetector.ts` | Accelerometer-based step detection with adaptive threshold |
+| [[step-filter]] | `utils/stepFilter.ts` | Cadence & burst filter for pedometer fallback |
+
+## Widget (widget/)
+
+| Page | File | Summary |
+|------|------|---------|
+| [[widget-task-handler]] | `widget/widget-task-handler.tsx` | React widget render handler using `react-native-android-widget` |
+| `NfitWidget.tsx` | `widget/NfitWidget.tsx` | Widget UI component: steps, goal progress |
 
 ## Native Modules (modules/)
 
 | Page | File | Summary |
 |------|------|---------|
-| [[nfit-widget]] | `modules/nfit-widget/` | Android home screen widget: RemoteViews, AppWidgetProvider, Kotlin native module |
 | [[nfit-background-steps]] | `modules/nfit-background-steps/` | Android background step tracking: WorkManager (15min), no foreground service |
 
 ## Components (components/)

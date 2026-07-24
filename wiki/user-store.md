@@ -33,7 +33,7 @@ interface Workout {
 |--------|----------|
 | `setProfile(p)` | Sets profile + marks onboarding complete |
 | `setHasCompletedOnboarding(v)` | Direct flag toggle |
-| `updateStepStreak(today, goalReached)` | Only increments if `goalReached` is true. Increments if lastActiveDate was yesterday, resets if not. Uses date-fns `isSameDay` |
+| `updateStepStreak(today, goalReached)` | Only increments if `goalReached` is true. First-ever goal → sets streak to 1. Consecutive with yesterday → increments. Gap → resets to 1. Uses date-fns `isSameDay` |
 | `updateProfile(updates)` | Partial merge into profile |
 | `addWorkout(w)` | Appends workout with auto-generated `id` (Date.now) and `date` (today) |
 | `removeWorkout(id)` | Filters workout by id |

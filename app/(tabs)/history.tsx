@@ -7,6 +7,7 @@ import { useFitnessStore, DailySteps } from '../../store/fitnessStore';
 import { calculateCalories } from '../../utils/calculations';
 import { getColors } from '../../utils/theme';
 import { format, getDay, startOfMonth, endOfMonth, subDays, startOfYear } from 'date-fns';
+import { useFitnessStats } from '../../hooks/useFitnessStats';
 
 type ViewMode = 'week' | 'month' | 'year';
 
@@ -17,7 +18,10 @@ export default function HistoryScreen() {
   const getWeekHistory = useFitnessStore((state) => state.getWeekHistory);
   const getMonthHistory = useFitnessStore((state) => state.getMonthHistory);
   const getYearHistory = useFitnessStore((state) => state.getYearHistory);
-  const stepStreak = useUserStore((state) => state.stepStreak);
+  
+  // Use active streak from useFitnessStats which handles broken streaks correctly
+  const stats = useFitnessStats();
+  const stepStreak = stats?.stepStreak || 0;
 
   const [viewMode, setViewMode] = useState<ViewMode>('week');
 
@@ -266,15 +270,18 @@ export default function HistoryScreen() {
           <Text style={[styles.subtitle, { color: c.textTertiary }]}>Your fitness journey</Text>
         </View>
 
-        <View style={[styles.streakCard, { backgroundColor: c.surface }]}>
-          <View style={[styles.streakIcon, { backgroundColor: c.streak + '20' }]}>
-            <MaterialCommunityIcons name="fire" size={28} color={c.streak} />
+        {stepStreak > 0 && (
+          <View style={[styles.streakCard, { backgroundColor: c.surface }]}>
+            <View style={[styles.streakIcon, { backgroundColor: c.streak + '20' }]}>
+              <MaterialCommunityIcons name="fire" size={28} color={c.streak} />
+            </View>
+            <View style={{ marginLeft: 16 }}>
+              <Text style={[styles.streakValue, { color: c.streak }]}>{stepStreak} days</Text>
+              <Text style={[styles.streakLabel, { color: c.textTertiary }]}>Current streak</Text>
+            </View>
           </View>
-          <View style={{ marginLeft: 16 }}>
-            <Text style={[styles.streakValue, { color: c.streak }]}>{stepStreak} days</Text>
-            <Text style={[styles.streakLabel, { color: c.textTertiary }]}>Current streak</Text>
-          </View>
-        </View>
+        )}
+
 
         <View style={[styles.tabsContainer, { backgroundColor: c.surface }]}>
           <TouchableOpacity

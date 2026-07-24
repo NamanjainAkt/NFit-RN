@@ -45,15 +45,28 @@
     "plugins": [
       "expo-router",
       "expo-notifications",
-      "expo-sharing",
-      "expo-font",
       [
         "expo-sensors",
         {
           "isBackgroundEnabled": true
         }
       ],
-      "expo-sqlite"
+      "expo-sqlite",
+      [
+        "react-native-android-widget",
+        {
+          "widgets": [
+            {
+              "name": "NfitWidget",
+              "label": "NFit Widget",
+              "minWidth": "110dp",
+              "minHeight": "110dp",
+              "description": "Keep track of your steps from the home screen",
+              "updatePeriodMillis": 86400000
+            }
+          ]
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

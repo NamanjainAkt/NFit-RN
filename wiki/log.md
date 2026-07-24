@@ -2,6 +2,79 @@
 
 Append-only chronological record. Format: `## [YYYY-MM-DD] action | subject`
 
+## [2026-07-24] refactor | Widget replaced with react-native-android-widget + accelerometer step detection
+
+Complete rework of widget and step tracking architecture:
+- Removed custom Kotlin Expo module (`modules/nfit-widget/`) 
+- Replaced with `react-native-android-widget` library: widget UI as React
+  components (`widget/NfitWidget.tsx`), task handler reads Zustand storage
+  directly (`widget/widget-task-handler.tsx`)
+- Java bridge: `android/.../widget/NfitWidget.java` extends `RNWidgetProvider`
+- New `utils/stepDetector.ts` — accelerometer low-pass filter + adaptive
+  threshold + peak detection (primary tracking mode at 20Hz)
+- New `utils/stepFilter.ts` — cadence & burst filter (fallback for pedometer)
+- New `utils/__tests__/stepFilter.test.ts` — tests for step filter
+- `widgetBridge.ts` updated to use `requestWidgetUpdate()` instead of
+  custom native module; added `resetAccumulatedSteps()`
+- `useStepTracker.ts` — dual mode: accelerometer StepDetector when available,
+  pedometer + stepFilter fallback
+- `fitnessStore.ts` — debounced widget refresh + SQLite save; added
+  `currentStreak` field, `syncTodayWithHistory` for calorie/distance sync
+- Hourly notifications 8am-8pm retained from previous session
+- Streak semantics: first goal reach = 1 (user's preference), gap reset = 1
+
+## [2026-07-24] fix | Widget "Unable to load" crash & robust step cadence/shake filtering
+
+1. Widget Fix:
+   - Removed non-remotable `setColorStateList(pbarId, "setProgressTintList", ...)` call from `NfitWidgetProvider.kt` and `NfitWidgetModule.kt`. In Android RemoteViews, `setProgressTintList` is not annotated with `@Remotable`, which caused Android System Server to throw an ActionException during widget inflation and display "Unable to load widget".
+   - Enhanced widget refresh trigger to issue broadcast intent `expo.modules.nfitwidget.REFRESH` and update all widget instances via `appWidgetManager.updateAppWidget(appWidgetIds, views)`.
+
+2. Robust Step Cadence & Shake Filter:
+   - Created `utils/stepFilter.ts` implementing a 4-point cadence & burst filter algorithm.
+   - Enforces a 5-step minimum burst threshold within a 2500ms cadence window before committing steps, discarding single/double phone handling shakes.
+   - Caps step rate to max 5 steps/second to block rapid manual phone shaking.
+   - Fully integrated into `hooks/useStepTracker.ts` and covered by unit tests in `utils/__tests__/stepFilter.test.ts`.
+
+## [2026-07-24] fix | Widget native module not linked into APK
+
+Widget module at `modules/nfit-widget/` was never linked into the Android
+build — not in `package.json` dependencies, so Expo autolinking skipped it.
+`requireNativeModule('NfitWidget')` failed silently, widget bridge returned
+false, SharedPreferences never written, widget always showed zeros.
+
+Fix: added `"nfit-widget": "file:./modules/nfit-widget"` to root `package.json`
+then ran `npm install` and rebuilt APK.
+
+Build output confirms `nfit-widget (1.0.0)` now auto-linked.
+
+## [2026-07-24] fix | Notifications spamming 8pm every hour daytime
+
+Replaced single daily reminder at 20:00 (which stacked duplicates on every
+mount, causing 8+ notifications at 8pm) with hourly reminders 8am-8pm.
+Cancels all existing scheduled notifications before rescheduling.
+
+Changes:
+- `utils/notifications.ts` — `scheduleDailyReminder` → `scheduleHourlyReminders`
+  cancels all, then schedules DAILY triggers for each hour 8..20
+- `app/(tabs)/index.tsx` — updated import & call
+
+## [2026-07-24] fix | Step tracking deadlock + streak semantics
+
+Fixed step validation pipeline that blocked all steps (chicken-and-egg deadlock:
+checkContinuousMovement required 15 accepted steps to contribute score, but
+without it confidence never reached threshold 70).
+
+Reverted pedometer callback to direct step counting (no validation gate).
+Deleted dead code: stepValidator.ts, useMotionValidator.ts, activityBridge.ts.
+
+Fixed streak: first goal reach and gap reset now set stepStreak to 0 (not 1),
+so streak only counts consecutive days (2+ days = streak 1+).
+
+Changes:
+- `hooks/useStepTracker.ts` — removed validation pipeline from pedometer
+  callback; removed dead imports/refs/activityPoll
+- `store/userStore.ts` — stepStreak init 0, gap reset 0
+
 ## [2026-07-11] fix | Streak only increments on goal reached + widget redesign
 
 Fixed streak incorrectly incrementing on every step instead of only when
@@ -111,6 +184,20 @@ Changes:
 - Wiki: all affected pages updated (nfit-background-steps, data-flow, architecture,
   widget-bridge, use-step-tracker, index, log)
 
+## [2026-07-24] fix | Widget crash resilience
+
+Added try-catch wrappers around both widget update paths and added null-ID guards in `NfitWidgetModule.triggerWidgetUpdate` to prevent unhandled exceptions from crashing the widget provider.
+- `modules/nfit-widget/.../NfitWidgetModule.kt` — wrapped `triggerWidgetUpdate` in try-catch, replaced raw `setTextViewText(resId(...), ...)` with safe helpers that guard `resId == 0`
+- `android/app/.../NfitWidgetProvider.kt` — wrapped `onUpdateInternal` in try-catch, added `android.util.Log` import
+
+## [2026-07-24] build | Production APK (debug-signed)
+
+Built release APK via `./gradlew :app:assembleRelease` with OpenJDK 17.
+- Output: `android/app/build/outputs/apk/release/app-release.apk` (90 MB)
+- Signed with debug keystore (not Play Store ready)
+- Hermes JS engine enabled, universal APK (all 4 ABIs: arm64-v8a, armeabi-v7a, x86, x86_64)
+- Version: 1.2.1 (versionCode 1)
+
 ## [2026-07-11] ingest | Full codebase
 
 Initial ingest of entire Nfit codebase. Created 24 wiki pages covering:
@@ -124,3 +211,9 @@ Initial ingest of entire Nfit codebase. Created 24 wiki pages covering:
 - 3 source doc pages (PLAN.md, package.json, app.json)
 
 Updated project-level AGENTS.md with strict wiki-first workflow.
+# #   [ 2 0 2 6 - 0 7 - 2 4 ]   u p d a t e   |   u s e r S t o r e ,   u s e S t e p T r a c k e r ,   N f i t W i d g e t P r o v i d e r :   F i x e d   s t r e a k   l o g i c   t o   b e   1 - i n d e x e d ,   h i d   s t r e a k   b a d g e   i f   <   2 ,   t i g h t e n e d   s t e p F i l t e r   p a r a m e t e r s   a g a i n s t   s h a k i n g ,   a n d   f i x e d   w i d g e t   i n f l a t i o n   c r a s h   b y   r e p l a c i n g   t h e m e   a t t r i b u t e   w i t h   a b s o l u t e   s t y l e  
+ ## [2026-07-24] update | Downgraded Expo SDK to 54 and aligned dependencies
+
+## [2026-07-24] build | App production build release
+
+Built production APK successfully using Expo SDK 54 after refactoring widget to react-native-android-widget and integrating useFitnessStats. Output generated at android/app/build/outputs/apk/release/app-release.apk

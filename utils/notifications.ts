@@ -81,23 +81,26 @@ export async function sendStreakNotification(streak: number): Promise<void> {
   }
 }
 
-export async function scheduleDailyReminder(hour: number = 20, minute: number = 0): Promise<string | null> {
+export async function scheduleHourlyReminders(startHour: number = 8, endHour: number = 20): Promise<void> {
   try {
-    const id = await Notifications.scheduleNotificationAsync({
-      content: {
-        title: 'Time to move!',
-        body: "Don't forget to get your steps in today.",
-        data: { type: 'daily_reminder' },
-      },
-      trigger: {
-        type: Notifications.SchedulableTriggerInputTypes.DAILY,
-        hour,
-        minute,
-      },
-    });
-    return id;
+    await Notifications.cancelAllScheduledNotificationsAsync();
+
+    for (let hour = startHour; hour <= endHour; hour++) {
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: 'Time to move!',
+          body: "Don't forget to get your steps in today.",
+          data: { type: 'daily_reminder' },
+        },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.DAILY,
+          hour,
+          minute: 0,
+        },
+      });
+    }
   } catch {
-    return null;
+    // Silently fail
   }
 }
 

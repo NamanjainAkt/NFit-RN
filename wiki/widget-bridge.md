@@ -1,30 +1,29 @@
 # Widget Bridge
 
-> `utils/widgetBridge.ts` | Native module bridge for widget + background service
+> `utils/widgetBridge.ts` | Widget update + background step bridge
 
 ## Purpose
-Provides JS interface to the native Android modules for the home screen widget and background step tracking service.
+Provides JS interface for the Android home screen widget (via `react-native-android-widget`) and the native background step tracking module.
 
 ## Functions
 
 ### `refreshWidget()`
-Reads current state from stores, calculates calories/distance/streak, calls `updateWidgetData(data)` on the native module. Falls back to `updateWidget()` if data method unavailable. Android-only.
+Triggers a widget update via `requestWidgetUpdate()` from `react-native-android-widget`. Calls the [[widget-task-handler]] which reads Zustand storage and renders the widget React component. Android-only.
 
 ### `getWidgetData()`
-Reads widget data from native storage. Android-only.
+Legacy — reads widget data from the old NfitWidget native module (kept for backward compatibility).
 
 ### `getAccumulatedSteps()`
-Reads accumulated steps from WorkManager background tracking. Returns the total steps recorded while the app was closed. Delegates to `NfitBackgroundSteps.getAccumulatedSteps()`. Android-only; returns 0 on other platforms.
+Reads accumulated steps from WorkManager background tracking via `NfitBackgroundSteps.getAccumulatedSteps()`. Returns the total steps recorded while the app was closed. Android-only; returns 0 on other platforms.
+
+### `resetAccumulatedSteps()`
+Resets the native background step counter to 0 after syncing into the app's baseline.
 
 ### `pushDataToWidget()`
 Alias for `refreshWidget()`.
 
-## Native Module Loading
-Lazy-loaded via `requireNativeModule('NfitWidget')` with fallback to `NativeModulesProxy`. Same pattern for `NfitBackgroundSteps`.
-
 ## Dependencies
+- [[widget-task-handler]] — renders the widget React component
 - [[user-store]] — profile, stepStreak
 - [[fitness-store]] — todaySteps, todayFloors, todayActiveMinutes
-- [[calculations]] — calculateCalories, calculateDistance
-- [[nfit-widget]] — native module
-- [[nfit-background-steps]] — native module
+- [[nfit-background-steps]] — native background steps module

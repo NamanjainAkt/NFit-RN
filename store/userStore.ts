@@ -95,9 +95,11 @@ export const useUserStore = create<UserState>()(
           date: format(new Date(), 'yyyy-MM-dd'),
         };
         set((state) => ({ workouts: [...state.workouts, newWorkout] }));
+        try { require('./fitnessStore').useFitnessStore.getState().syncTodayWithHistory(); } catch(e) {}
       },
       removeWorkout: (id) => {
         set((state) => ({ workouts: state.workouts.filter((w) => w.id !== id) }));
+        try { require('./fitnessStore').useFitnessStore.getState().syncTodayWithHistory(); } catch(e) {}
       },
       getWorkouts: () => {
         return get().workouts;

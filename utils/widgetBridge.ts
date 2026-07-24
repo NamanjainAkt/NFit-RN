@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import { requestWidgetUpdate } from 'react-native-android-widget';
 import { requireNativeModule } from 'expo';
 import { useFitnessStore } from '../store/fitnessStore';
 import { useUserStore } from '../store/userStore';
@@ -43,43 +44,14 @@ export async function refreshWidget(): Promise<boolean> {
   if (Platform.OS !== 'android') return false;
 
   try {
-    const profile = useUserStore.getState().profile;
-    if (!profile) return false;
-
-    const { todaySteps, todayFloors, todayActiveMinutes } = useFitnessStore.getState();
-    const stepStreak = useUserStore.getState().stepStreak;
-
-    const calories = calculateCalories(todaySteps, profile.weight, profile.useMetric);
-    const distance = calculateDistance(todaySteps, profile.height, profile.useMetric);
-    const distanceUnit = profile.useMetric ? 'km' : 'mi';
-
-    const widget = getWidgetModule();
-    if (widget?.updateWidgetData) {
-      const data = {
-        steps: todaySteps,
-        goal: profile.dailyStepGoal || 10000,
-        calories,
-        distance,
-        streak: stepStreak,
-        floors: todayFloors,
-        activeMinutes: todayActiveMinutes,
-        distanceUnit,
-      };
-      console.log('[widgetBridge] calling updateWidgetData with:', data);
-      await widget.updateWidgetData(data);
-      return true;
-    } else {
-      console.warn('[widgetBridge] widget module or updateWidgetData not available');
-    }
-
-    // Fallback: just trigger refresh
-    if (widget?.updateWidget) {
-      console.log('[widgetBridge] calling updateWidget fallback');
-      await widget.updateWidget();
-      return true;
-    }
-
-    return false;
+    requestWidgetUpdate({
+      widgetName: 'NfitWidget',
+      renderWidget: () => import('../widget/widget-task-handler').then(m => m.widgetTaskHandler as any),
+      widgetNotFound: () => {
+        // Called if widget is not placed on the home screen
+      }
+    });
+    return true;
   } catch (e) {
     console.error('[widgetBridge] refreshWidget failed:', e);
     return false;
@@ -118,6 +90,22 @@ export async function getAccumulatedSteps(): Promise<number> {
     return 0;
   } catch {
     return 0;
+  }
+}
+
+/**
+ * Reset accumulated background steps to 0 after syncing.
+ */
+export async function resetAccumulatedSteps(): Promise<void> {
+  if (Platform.OS !== 'android') return;
+
+  try {
+    const bg = getBackgroundStepsModule();
+    if (bg?.resetAccumulatedSteps) {
+      await bg.resetAccumulatedSteps();
+    }
+  } catch {
+    // Ignore
   }
 }
 

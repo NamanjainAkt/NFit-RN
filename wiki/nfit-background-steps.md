@@ -25,7 +25,11 @@ App opens  → JS calls native getAccumulatedSteps()
            → Steps taken while closed are fully recovered
 ```
 
+## Exposed Functions
+- `getAccumulatedSteps()` — returns total steps recorded while app was closed
+- `resetAccumulatedSteps()` — resets the native counter to 0 after JS has consumed the value
+
 ## Dependencies
-- [[widget-bridge]] — JS-side bridge (`getAccumulatedSteps`)
-- [[use-step-tracker]] — reads accumulated steps on startup
+- [[widget-bridge]] — JS-side bridge (`getAccumulatedSteps`, `resetAccumulatedSteps`)
+- [[use-step-tracker]] — reads and resets accumulated steps on startup
 - `androidx.work:work-runtime-ktx` — WorkManager

@@ -89,8 +89,16 @@ export const useFitnessStore = create<FitnessState>()(
       },
       syncTodayWithHistory: () => {
         const { todaySteps, todayFloors, todayActiveMinutes, recordDay } = get();
-        const profile = useUserStore.getState().profile;
-        const calories = profile ? calculateCalories(todaySteps, profile.weight, profile.useMetric) : 0;
+        const userState = useUserStore.getState();
+        const profile = userState.profile;
+        const todayStr = format(new Date(), 'yyyy-MM-dd');
+        
+        const baseCalories = profile ? calculateCalories(todaySteps, profile.weight, profile.useMetric) : 0;
+        const workoutCalories = userState.workouts
+          .filter((w: any) => w.date === todayStr)
+          .reduce((sum: number, w: any) => sum + (Number(w.calories) || 0), 0);
+          
+        const calories = baseCalories + workoutCalories;
         const distance = profile ? calculateDistance(todaySteps, profile.height, profile.useMetric) : 0;
         recordDay({ steps: todaySteps, floors: todayFloors, activeMinutes: todayActiveMinutes, calories, distance });
       },

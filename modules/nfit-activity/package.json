@@ -1,0 +1,6 @@
+{
+  "name": "nfit-activity",
+  "version": "1.0.0",
+  "main": "src/NfitActivityModule.ts",
+  "react-native": "src/NfitActivityModule.ts"
+}
