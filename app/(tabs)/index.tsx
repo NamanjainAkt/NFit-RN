@@ -60,7 +60,7 @@ export default function HomeScreen() {
   if (!stats) return null;
 
   const { profile, todaySteps, todayFloors, todayActiveMinutes, stepStreak, calories, distance, distanceUnit, goal, goalReached } = stats;
-  const { isSimulated, pulseAnim } = stepTracker;
+  const { trackingUnavailable, pulseAnim } = stepTracker;
   const darkMode = profile?.darkMode ?? false;
   const c = getColors(darkMode);
 
@@ -160,7 +160,7 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {isSimulated && (
+      {trackingUnavailable && (
         <View style={[styles.warningCard, { backgroundColor: c.warning + '20', borderColor: c.warning, borderWidth: 1 }]}>
           <Ionicons name="information-circle" size={18} color={c.warning} />
           <Text style={[styles.warningText, { color: c.warning }]}>Demo mode - steps simulated</Text>

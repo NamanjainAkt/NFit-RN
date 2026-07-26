@@ -1,9 +1,6 @@
 import { Platform } from 'react-native';
 import { requestWidgetUpdate } from 'react-native-android-widget';
 import { requireNativeModule } from 'expo';
-import { useFitnessStore } from '../store/fitnessStore';
-import { useUserStore } from '../store/userStore';
-import { calculateCalories, calculateDistance } from './calculations';
 
 // Native module references (loaded lazily)
 let NfitWidget: any = null;
@@ -29,9 +26,13 @@ function getWidgetModule() {
 function getBackgroundStepsModule() {
   if (!NfitBackgroundSteps) {
     try {
-      NfitBackgroundSteps = require('expo-modules-core').NativeModulesProxy.NfitBackgroundSteps;
+      NfitBackgroundSteps = requireNativeModule('NfitBackgroundSteps');
     } catch {
-      NfitBackgroundSteps = null;
+      try {
+        NfitBackgroundSteps = require('expo-modules-core').NativeModulesProxy.NfitBackgroundSteps;
+      } catch {
+        NfitBackgroundSteps = null;
+      }
     }
   }
   return NfitBackgroundSteps;
@@ -59,33 +60,65 @@ export async function refreshWidget(): Promise<boolean> {
 }
 
 /**
- * Get current widget data from native storage
+ * Start the continuous background step tracking service
  */
-export async function getWidgetData(): Promise<Record<string, any> | null> {
-  if (Platform.OS !== 'android') return null;
-
-  try {
-    const widget = getWidgetModule();
-    if (widget?.getWidgetData) {
-      return await widget.getWidgetData();
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Get accumulated steps from WorkManager background tracking.
- * Returns the total steps recorded while app was closed.
- */
-export async function getAccumulatedSteps(): Promise<number> {
-  if (Platform.OS !== 'android') return 0;
-
+export async function startBackgroundService(): Promise<boolean> {
+  if (Platform.OS !== 'android') return false;
   try {
     const bg = getBackgroundStepsModule();
-    if (bg?.getAccumulatedSteps) {
-      return await bg.getAccumulatedSteps();
+    if (bg?.startService) {
+      return await bg.startService();
+    }
+    return false;
+  } catch (e) {
+    console.error('[widgetBridge] startBackgroundService failed:', e);
+    return false;
+  }
+}
+
+/**
+ * Stop the background step tracking service
+ */
+export async function stopBackgroundService(): Promise<boolean> {
+  if (Platform.OS !== 'android') return false;
+  try {
+    const bg = getBackgroundStepsModule();
+    if (bg?.stopService) {
+      return await bg.stopService();
+    }
+    return false;
+  } catch (e) {
+    console.error('[widgetBridge] stopBackgroundService failed:', e);
+    return false;
+  }
+}
+
+/**
+ * Check if the background service is running
+ */
+export async function isBackgroundServiceRunning(): Promise<boolean> {
+  if (Platform.OS !== 'android') return false;
+  try {
+    const bg = getBackgroundStepsModule();
+    if (bg?.isServiceRunning) {
+      return await bg.isServiceRunning();
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Get today's total step count from the native service.
+ * This is the primary API — the native service is the single source of truth.
+ */
+export async function getTotalDailySteps(): Promise<number> {
+  if (Platform.OS !== 'android') return 0;
+  try {
+    const bg = getBackgroundStepsModule();
+    if (bg?.getTotalDailySteps) {
+      return await bg.getTotalDailySteps();
     }
     return 0;
   } catch {
@@ -94,18 +127,89 @@ export async function getAccumulatedSteps(): Promise<number> {
 }
 
 /**
- * Reset accumulated background steps to 0 after syncing.
+ * Seed the native service's daily step total.
+ * Used on startup to ensure the native count includes steps
+ * from SQLite history (e.g. after a service restart mid-day).
+ */
+export async function setTotalDailySteps(steps: number): Promise<void> {
+  if (Platform.OS !== 'android') return;
+  try {
+    const bg = getBackgroundStepsModule();
+    if (bg?.setTotalDailySteps) {
+      await bg.setTotalDailySteps(steps);
+    }
+  } catch {}
+}
+
+export async function getDailyStepsDate(): Promise<string> {
+  if (Platform.OS !== 'android') return '';
+  try {
+    const bg = getBackgroundStepsModule();
+    return (await bg?.getDailyStepsDate?.()) ?? '';
+  } catch { return ''; }
+}
+
+export async function resetSensorBaseline(): Promise<void> {
+  if (Platform.OS !== 'android') return;
+  try {
+    const bg = getBackgroundStepsModule();
+    await bg?.resetSensorBaseline?.();
+  } catch {}
+}
+
+/**
+ * Get accumulated steps from background tracking service.
+ * @deprecated Use getTotalDailySteps() instead. This is kept for backward compat.
+ */
+export async function getAccumulatedSteps(): Promise<number> {
+  return getTotalDailySteps();
+}
+
+/**
+ * Reset accumulated background steps to 0.
+ * @deprecated This resets the daily total — use with caution.
  */
 export async function resetAccumulatedSteps(): Promise<void> {
   if (Platform.OS !== 'android') return;
-
   try {
     const bg = getBackgroundStepsModule();
     if (bg?.resetAccumulatedSteps) {
       await bg.resetAccumulatedSteps();
     }
+  } catch {}
+}
+
+/**
+ * Check if the app is subject to battery optimization restrictions.
+ * Returns true if battery-optimized (i.e., restricted).
+ */
+export async function isBatteryOptimized(): Promise<boolean> {
+  if (Platform.OS !== 'android') return false;
+  try {
+    const bg = getBackgroundStepsModule();
+    if (bg?.isBatteryOptimized) {
+      return await bg.isBatteryOptimized();
+    }
+    return false;
   } catch {
-    // Ignore
+    return false;
+  }
+}
+
+/**
+ * Open the system dialog to exempt this app from battery optimization.
+ * Returns true if the dialog was shown or the app is already exempt.
+ */
+export async function requestBatteryOptimizationExemption(): Promise<boolean> {
+  if (Platform.OS !== 'android') return false;
+  try {
+    const bg = getBackgroundStepsModule();
+    if (bg?.requestBatteryOptimizationExemption) {
+      return await bg.requestBatteryOptimizationExemption();
+    }
+    return false;
+  } catch {
+    return false;
   }
 }
 

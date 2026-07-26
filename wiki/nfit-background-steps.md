@@ -1,35 +1,37 @@
 # Nfit Background Steps (Native Module)
 
-> `modules/nfit-background-steps/` | Android background step tracking via WorkManager
+> `modules/nfit-background-steps/` | Android background step tracking via Foreground Service
 
 ## Purpose
-Tracks steps when the app is closed by reading the hardware `TYPE_STEP_COUNTER` sensor periodically via WorkManager. The accumulated total is exposed to JS on app start so steps taken while closed are never lost.
+Tracks steps continuously when the app is closed or when the screen is off by running an Android Foreground Service with hardware `TYPE_STEP_COUNTER` listener. Guarantees 100% reliable step counting and real-time widget updates.
 
-## Architecture (Hybrid)
-- **BackgroundTracking** — WorkManager periodic task every 15 min reads the sensor, computes delta, saves to SharedPrefs
-- **BackgroundStepsModule.kt** — Minimal Expo module exposing `getAccumulatedSteps()` to JS
-
-No foreground service. No wakelock. No persistent notification.
+## Architecture
+- **StepTrackerService.kt** — Foreground Service registered under `foregroundServiceType="health"`. Displays an ongoing status bar notification showing live step updates.
+- **BootReceiver.kt** — Receives `BOOT_COMPLETED` and `MY_PACKAGE_REPLACED` intents to automatically relaunch `StepTrackerService` on device startup.
+- **BackgroundStepsModule.kt** — Native Expo module exposing control and data methods to JS (`startService`, `stopService`, `isServiceRunning`, `getAccumulatedSteps`, `resetAccumulatedSteps`).
 
 ## How It Works
 ```
-App closed → WorkManager wakes every 15 min (200ms CPU)
-           → Reads TYPE_STEP_COUNTER (hardware, monotonic)
-           → Computes delta from last known total
-           → Adds delta to accumulated steps
-           → Saves to SharedPrefs (nfit_background_steps)
-           → CPU sleeps
-
-App opens  → JS calls native getAccumulatedSteps()
-           → Uses result as baseline + pedometer incremental
-           → Steps taken while closed are fully recovered
+App launch / Boot → Starts StepTrackerService (Foreground Service)
+                 → Service registers Sensor.TYPE_STEP_COUNTER listener
+                 → Listens for hardware step events even when screen is off
+                 → Handles day rollover logic independently of user activity
+                 → Computes step deltas and updates SharedPreferences (nfit_background_steps)
+                 → Broadcasts to Android widget every 10 steps
+                 → JS polls getTotalDailySteps() every 2s while active
 ```
 
-## Exposed Functions
-- `getAccumulatedSteps()` — returns total steps recorded while app was closed
-- `resetAccumulatedSteps()` — resets the native counter to 0 after JS has consumed the value
+## Exposed Native Functions
+- `startService()` — Starts the foreground service
+- `stopService()` — Stops the foreground service
+- `isServiceRunning()` — Checks if foreground service is running via SharedPreferences alive key
+- `getTotalDailySteps()` — Returns total steps for today (Single Source of Truth)
+- `setTotalDailySteps()` — Seeds native counter with steps (e.g. from SQLite history)
+- `getDailyStepsDate()` — Returns the current tracking date string from native storage
+- `resetSensorBaseline()` — Clears last sensor reading to force a re-baseline
+- `isBatteryOptimized()` — Checks if battery optimization is enabled
+- `requestBatteryOptimizationExemption()` — Prompts user to disable battery optimization
 
 ## Dependencies
-- [[widget-bridge]] — JS-side bridge (`getAccumulatedSteps`, `resetAccumulatedSteps`)
-- [[use-step-tracker]] — reads and resets accumulated steps on startup
-- `androidx.work:work-runtime-ktx` — WorkManager
+- [[widget-bridge]] — JS-side bridge (`startBackgroundService`, `getAccumulatedSteps`)
+- [[use-step-tracker]] — Starts background service and consumes step deltas on app launch

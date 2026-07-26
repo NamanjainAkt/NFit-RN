@@ -44,7 +44,7 @@ export default function HistoryScreen() {
     const totalDistance = weekData.reduce((sum, d) => sum + d.distance, 0);
     const avgSteps = Math.round(totalSteps / 7);
     const daysGoalMet = weekData.filter((d) => d.steps >= goal).length;
-    const calories = profile ? calculateCalories(totalSteps, profile.weight, profile.useMetric) : 0;
+    const calories = weekData.reduce((sum, d) => sum + (d.calories || 0), 0);
     const goalPercent = Math.round((avgSteps / goal) * 100);
 
     const prevWeekData: DailySteps[] = [];
@@ -119,7 +119,7 @@ export default function HistoryScreen() {
     const totalDistance = monthData.reduce((sum, d) => sum + d.distance, 0);
     const avgSteps = Math.round(totalSteps / daysInMonth);
     const daysGoalMet = monthData.filter((d) => d.steps >= goal).length;
-    const calories = profile ? calculateCalories(totalSteps, profile.weight, profile.useMetric) : 0;
+    const calories = monthData.reduce((sum, d) => sum + (d.calories || 0), 0);
     const goalPercent = Math.round((avgSteps / goal) * 100);
 
     const prevMonthDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
@@ -198,7 +198,7 @@ export default function HistoryScreen() {
     const totalDistance = yearData.reduce((sum, d) => sum + d.distance, 0);
     const avgSteps = Math.round(totalSteps / monthsElapsed);
     const monthsGoalMet = yearData.filter((d) => d.steps >= goal * 30).length;
-    const calories = profile ? calculateCalories(totalSteps, profile.weight, profile.useMetric) : 0;
+    const calories = yearData.reduce((sum, d) => sum + (d.calories || 0), 0);
     const goalPercent = Math.round((avgSteps / (goal * 30)) * 100);
 
     const lastYear = today.getFullYear() - 1;

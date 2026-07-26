@@ -1,3 +1,56 @@
+# Step Tracking Code Review Bundle 2
+
+This file contains additional requested files for code review.
+
+## File: modules/nfit-background-steps/android/src/main/kotlin/expo/modules/nfitbackgroundsteps/BootReceiver.kt
+
+`kotlin
+package expo.modules.nfitbackgroundsteps
+
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.util.Log
+
+class BootReceiver : BroadcastReceiver() {
+  override fun onReceive(context: Context?, intent: Intent?) {
+    if (context == null || intent == null) return
+
+    val action = intent.action
+    Log.d(TAG, "BootReceiver received action: $action")
+
+    if (Intent.ACTION_BOOT_COMPLETED == action || Intent.ACTION_MY_PACKAGE_REPLACED == action) {
+      try {
+        StepTrackerService.startService(context)
+        Log.d(TAG, "Successfully started StepTrackerService on boot/update")
+      } catch (e: Exception) {
+        Log.e(TAG, "Failed to start StepTrackerService on boot", e)
+      }
+    }
+  }
+
+  companion object {
+    private const val TAG = "NfitBootReceiver"
+  }
+}
+
+`
+
+## File: modules/nfit-background-steps/expo-module.config.json
+
+`json
+{
+  "platforms": ["android"],
+  "android": {
+    "modules": ["expo.modules.nfitbackgroundsteps.BackgroundStepsModule"]
+  }
+}
+
+`
+
+## File: utils/database.ts
+
+`ts
 import * as SQLite from 'expo-sqlite';
 import { format } from 'date-fns';
 import type { UserProfile, Workout } from '../store/userStore';
@@ -23,6 +76,13 @@ async function initTables() {
       active_minutes INTEGER NOT NULL DEFAULT 0,
       calories REAL NOT NULL DEFAULT 0,
       distance REAL NOT NULL DEFAULT 0
+    );
+
+    CREATE TABLE IF NOT EXISTS step_counter_state (
+      id INTEGER PRIMARY KEY DEFAULT 1,
+      accumulated_steps INTEGER NOT NULL DEFAULT 0,
+      last_updated_date TEXT NOT NULL DEFAULT '',
+      updated_at TEXT NOT NULL
     );
 
     CREATE TABLE IF NOT EXISTS workouts (
@@ -54,8 +114,37 @@ async function initTables() {
     );
   `);
 
+  const today = format(new Date(), 'yyyy-MM-dd');
+  await d.runAsync(
+    `INSERT OR IGNORE INTO step_counter_state (id, accumulated_steps, last_updated_date, updated_at)
+     VALUES (1, 0, ?, ?)`,
+    today,
+    new Date().toISOString()
+  );
+
   await d.runAsync(
     `INSERT OR IGNORE INTO profile (id) VALUES (1)`
+  );
+}
+
+// ── Step counter state ──
+
+export async function loadStepCounterState(): Promise<{ accumulatedSteps: number; lastUpdatedDate: string }> {
+  const d = await getDb();
+  const row = await d.getFirstAsync<{ accumulated_steps: number; last_updated_date: string }>(
+    `SELECT accumulated_steps, last_updated_date FROM step_counter_state WHERE id = 1`
+  );
+  return { accumulatedSteps: row?.accumulated_steps ?? 0, lastUpdatedDate: row?.last_updated_date ?? '' };
+}
+
+export async function saveStepCounterState(accumulatedSteps: number) {
+  const d = await getDb();
+  const today = format(new Date(), 'yyyy-MM-dd');
+  await d.runAsync(
+    `UPDATE step_counter_state SET accumulated_steps = ?, last_updated_date = ?, updated_at = ? WHERE id = 1`,
+    accumulatedSteps,
+    today,
+    new Date().toISOString()
   );
 }
 
@@ -210,3 +299,125 @@ export async function deleteAppState(key: string) {
   const d = await getDb();
   await d.runAsync(`DELETE FROM app_state WHERE key = ?`, key);
 }
+
+`
+
+## File: utils/notifications.ts
+
+`ts
+import * as Notifications from 'expo-notifications';
+import { Platform } from 'react-native';
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
+
+// Remove console.error in production - use silent fail
+const logError = __DEV__ ? console.error : () => {};
+
+export async function requestNotificationPermissions(): Promise<boolean> {
+  const { status: existingStatus } = await Notifications.getPermissionsAsync();
+  let finalStatus = existingStatus;
+
+  if (existingStatus !== 'granted') {
+    const { status } = await Notifications.requestPermissionsAsync();
+    finalStatus = status;
+  }
+
+  if (finalStatus !== 'granted') {
+    return false;
+  }
+
+  if (Platform.OS === 'android') {
+    await Notifications.setNotificationChannelAsync('default', {
+      name: 'default',
+      importance: Notifications.AndroidImportance.MAX,
+      vibrationPattern: [0, 250, 250, 250],
+      lightColor: '#FF231F7C',
+    });
+
+    await Notifications.setNotificationChannelAsync('reminders', {
+      name: 'Reminders',
+      importance: Notifications.AndroidImportance.HIGH,
+      vibrationPattern: [0, 250, 250, 250],
+      lightColor: '#FF231F7C',
+    });
+
+    await Notifications.setNotificationChannelAsync('achievements', {
+      name: 'Achievements',
+      importance: Notifications.AndroidImportance.DEFAULT,
+    });
+  }
+
+  return true;
+}
+
+export async function sendGoalReachedNotification(steps: number): Promise<void> {
+  try {
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: 'Goal Achieved!',
+        body: `Congratulations! You've reached ${steps.toLocaleString()} steps today!`,
+        data: { type: 'goal_reached' },
+      },
+      trigger: null,
+    });
+  } catch {
+    // Silently fail - notification is non-critical
+  }
+}
+
+export async function sendStreakNotification(streak: number): Promise<void> {
+  try {
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: `${streak} Day Streak!`,
+        body: `Amazing! You've maintained your streak for ${streak} days. Keep it up!`,
+        data: { type: 'streak' },
+      },
+      trigger: null,
+    });
+  } catch {
+    // Silently fail - notification is non-critical
+  }
+}
+
+export async function scheduleHourlyReminders(startHour: number = 8, endHour: number = 20): Promise<void> {
+  try {
+    await Notifications.cancelAllScheduledNotificationsAsync();
+
+    for (let hour = startHour; hour <= endHour; hour++) {
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: 'Time to move!',
+          body: "Don't forget to get your steps in today.",
+          data: { type: 'daily_reminder' },
+        },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.DAILY,
+          hour,
+          minute: 0,
+        },
+      });
+    }
+  } catch {
+    // Silently fail
+  }
+}
+
+export async function cancelAllNotifications(): Promise<void> {
+  try {
+    await Notifications.cancelAllScheduledNotificationsAsync();
+  } catch {
+    // Silently fail
+  }
+}
+
+`
+

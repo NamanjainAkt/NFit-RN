@@ -1,15 +1,15 @@
 # useStepTracker
 
-> `hooks/useStepTracker.ts` | Dual-mode step tracking (accelerometer + pedometer fallback)
+> `hooks/useStepTracker.ts` | Polls native StepTrackerService for real-time step count
 
 ## Purpose
-Central hook that manages step counting: restores baseline from SQLite, subscribes to either the accelerometer-based StepDetector or the system pedometer, syncs to the widget, and manages goal notifications + animations.
+Central hook that reads the daily step total from the native Android `StepTrackerService` via polling. The native service uses the hardware `TYPE_STEP_COUNTER` sensor (single source of truth) which runs continuously in the background and has built-in shake rejection. The JS layer never counts steps independently.
 
 ## Return Value
 ```typescript
 {
   todaySteps: number;
-  isSimulated: boolean;
+  trackingUnavailable: boolean;
   progressAnim: Animated.Value;
   pulseAnim: Animated.Value;
   goal: number;
@@ -17,25 +17,32 @@ Central hook that manages step counting: restores baseline from SQLite, subscrib
 }
 ```
 
-## Flow
+## Key Behavior
 1. **Restore baseline**: Loads today's steps from SQLite via `loadDailyStepsForDate()`. Falls back to Zustand `stepHistory` if SQLite returns null.
-2. **WorkManager baseline**: Calls `getAccumulatedSteps()`, adds to baseline, then calls `resetAccumulatedSteps()` to clear the native counter.
-3. **Mode selection**: Checks `Accelerometer.isAvailableAsync()`:
-   - **Primary (accelerometer)**: Creates a `StepDetector` ([[step-detector]]) at 50ms update interval (20Hz). Feeds raw accelerometer samples (converted to m/s²) via `detector.addSample()`. Counts step deltas via callback.
-   - **Fallback (pedometer)**: Uses `Pedometer.watchStepCount()` with [[step-filter]] (processStepDelta) for cadence/burst filtering.
-4. **Widget sync**: Notifies widget every 50 steps via `refreshWidget()`.
-5. **Streak update**: Calls `updateStepStreak()` with `goalReached=true` inside the goal notification effect — only when daily goal is first met.
-6. **Goal reached**: When progress >= 1 and not yet notified: sends notification, updates streak, triggers pulse animation (3 loops), sends streak notification at 7, 14, 21... consecutive days (`(stepStreak + 1) % 7 === 0`).
+2. **Permission & service start**: Requests `ACTIVITY_RECOGNITION` via `Pedometer.requestPermissionsAsync()`, then starts `StepTrackerService` through [[widget-bridge]].
+3. **Seed native total**: If SQLite baseline > native total (service was restarted mid-day), calls `setTotalDailySteps()` to seed the native counter.
+4. **Battery optimization**: Checks `isBatteryOptimized()` and requests exemption via system dialog if needed.
+5. **2-second polling**: Sets up `setInterval` that calls `getTotalDailySteps()` every 2s and updates the store when the count changes.
+6. **App resume sync**: On `AppState` change to `active`, immediately polls native total and ensures the service is still running (restarts if killed).
+7. **Widget sync**: Notifies widget on profile change and app resume.
+8. **Goal reached**: When progress >= 1 and not yet notified: sends notification, updates streak, triggers pulse animation (3 loops), and sends streak notification at 7, 14, 21... consecutive days.
 
-## Simulation
-When pedometer is unavailable or permission denied: generates random steps (1000-6000).
+## Architecture
+```
+TYPE_STEP_COUNTER (hardware sensor)
+    → StepTrackerService (foreground service, always running)
+    → SharedPreferences (daily_total_steps)
+    → getTotalDailySteps() polled every 2s by JS
+    → setTodaySteps() → fitnessStore → widget + SQLite
+```
+
+## Tracking Unavailable Mode
+When pedometer is unavailable or permission is denied: sets `trackingUnavailable` to true. The UI renders a warning banner instead of injecting fake random steps.
 
 ## Dependencies
-- [[user-store]] — profile, stepStreak, updateStepStreak
-- [[fitness-store]] — todaySteps, setTodaySteps, setTodayFloors, setTodayActiveMinutes
-- [[step-detector]] — accelerometer-based step detection
-- [[step-filter]] — pedometer cadence/burst filter fallback
-- [[database]] — loadDailyStepsForDate, saveStepCounterState
-- [[notifications]] — sendGoalReachedNotification, sendStreakNotification
-- [[widget-bridge]] — refreshWidget, getAccumulatedSteps, resetAccumulatedSteps
-- `expo-sensors` — Pedometer, Accelerometer
+- [[user-store]] - profile, stepStreak, updateStepStreak
+- [[fitness-store]] - todaySteps, setTodaySteps, setTodayFloors, setTodayActiveMinutes
+- [[database]] - loadDailyStepsForDate
+- [[notifications]] - sendGoalReachedNotification, sendStreakNotification
+- [[widget-bridge]] - refreshWidget, startBackgroundService, getTotalDailySteps, setTotalDailySteps, isBackgroundServiceRunning, requestBatteryOptimizationExemption, isBatteryOptimized
+- `expo-sensors` - Pedometer (permission only, not for counting)

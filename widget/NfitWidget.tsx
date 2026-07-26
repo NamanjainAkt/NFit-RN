@@ -11,12 +11,13 @@ export function NfitWidget({ steps, goal }: NfitWidgetProps) {
   
   return (
     <FlexWidget
+      clickAction="OPEN_APP"
       style={{
         height: 'match_parent',
         width: 'match_parent',
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#ffffff',
+        backgroundColor: '#1E1E1E',
         borderRadius: 16,
         padding: 16,
       }}
@@ -26,15 +27,15 @@ export function NfitWidget({ steps, goal }: NfitWidgetProps) {
         style={{
           fontSize: 12,
           fontFamily: 'sans-serif-medium',
-          color: '#666666',
+          color: '#AAAAAA',
         }}
       />
       <TextWidget
-        text={steps.toString()}
+        text={steps.toLocaleString()}
         style={{
           fontSize: 32,
           fontFamily: 'sans-serif-black',
-          color: '#000000',
+          color: '#FFFFFF',
           marginVertical: 8,
         }}
       />
@@ -42,15 +43,15 @@ export function NfitWidget({ steps, goal }: NfitWidgetProps) {
         style={{
           width: 'match_parent',
           height: 8,
-          backgroundColor: '#E0E0E0',
+          backgroundColor: '#333333',
           borderRadius: 4,
         }}
       >
         <FlexWidget
           style={{
-            width: `${progress * 100}%` as any,
+            width: `${Math.max(progress * 100, 2)}%` as any,
             height: 'match_parent',
-            backgroundColor: '#8AB4F8',
+            backgroundColor: '#4CAF50',
             borderRadius: 4,
           }}
         />

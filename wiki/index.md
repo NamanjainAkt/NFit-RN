@@ -59,7 +59,7 @@ Nfit is a React Native / Expo fitness tracking app (v1.2.1) that counts steps vi
 
 | Page | File | Summary |
 |------|------|---------|
-| [[nfit-background-steps]] | `modules/nfit-background-steps/` | Android background step tracking: WorkManager (15min), no foreground service |
+| [[nfit-background-steps]] | `modules/nfit-background-steps/` | Android background step tracking: Foreground service with hardware TYPE_STEP_COUNTER, WorkManager watchdog, single source of truth |
 
 ## Components (components/)
 

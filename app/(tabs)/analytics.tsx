@@ -6,6 +6,7 @@ import { useUserStore } from '../../store/userStore';
 import { useFitnessStore } from '../../store/fitnessStore';
 import { getColors } from '../../utils/theme';
 import { format, subDays, startOfMonth, endOfMonth, getDay, getDaysInMonth } from 'date-fns';
+import { useFitnessStats } from '../../hooks/useFitnessStats';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CHART_PADDED = SCREEN_WIDTH - 40;
@@ -30,6 +31,7 @@ export default function AnalyticsScreen() {
   const todayActiveMinutes = useFitnessStore((state) => state.todayActiveMinutes);
   const getWeekHistory = useFitnessStore((state) => state.getWeekHistory);
   const getMonthHistory = useFitnessStore((state) => state.getMonthHistory);
+  const stats = useFitnessStats();
 
   const [rangePreset, setRangePreset] = useState<RangePreset>('30d');
   const [customStart, setCustomStart] = useState('');
@@ -224,7 +226,7 @@ export default function AnalyticsScreen() {
               {[
                 { icon: 'stairs' as const, value: todayFloors, label: 'Floors', color: c.floors },
                 { icon: 'timer' as const, value: todayActiveMinutes, label: 'Active Min', color: c.activeMinutes },
-                { icon: 'flame' as const, value: totalCalories, label: 'Calories', color: c.calories },
+                { icon: 'flame' as const, value: Math.round(stats?.calories || 0).toLocaleString(), label: 'Calories', color: c.calories },
               ].map((s) => (
                 <View key={s.label} style={styles.goalStat}>
                   <Ionicons name={s.icon === 'timer' ? 'time-outline' : s.icon === 'flame' ? 'flame-outline' : 'trending-up-outline'} size={20} color={s.color} />

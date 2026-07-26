@@ -158,6 +158,8 @@ export const useFitnessStore = create<FitnessState>()(
           let monthSteps = 0;
           let monthFloors = 0;
           let monthActiveMinutes = 0;
+          let monthCalories = 0;
+          let monthDistance = 0;
           for (let day = 1; day <= daysInMonth; day++) {
             const date = new Date(today.getFullYear(), month, day);
             const dateStr = format(date, 'yyyy-MM-dd');
@@ -166,6 +168,8 @@ export const useFitnessStore = create<FitnessState>()(
               monthSteps += existing.steps;
               monthFloors += existing.floors;
               monthActiveMinutes += existing.activeMinutes;
+              monthCalories += (existing.calories || 0);
+              monthDistance += (existing.distance || 0);
             }
           }
           yearData.push({
@@ -173,8 +177,8 @@ export const useFitnessStore = create<FitnessState>()(
             steps: monthSteps,
             floors: monthFloors,
             activeMinutes: monthActiveMinutes,
-            calories: profile ? calculateCalories(monthSteps, profile.weight, profile.useMetric) : 0,
-            distance: profile ? calculateDistance(monthSteps, profile.height, profile.useMetric) : 0,
+            calories: monthCalories,
+            distance: monthDistance,
           });
         }
         return yearData;

@@ -11,9 +11,6 @@ Notifications.setNotificationHandler({
   }),
 });
 
-// Remove console.error in production - use silent fail
-const logError = __DEV__ ? console.error : () => {};
-
 export async function requestNotificationPermissions(): Promise<boolean> {
   const { status: existingStatus } = await Notifications.getPermissionsAsync();
   let finalStatus = existingStatus;
@@ -58,6 +55,7 @@ export async function sendGoalReachedNotification(steps: number): Promise<void> 
         title: 'Goal Achieved!',
         body: `Congratulations! You've reached ${steps.toLocaleString()} steps today!`,
         data: { type: 'goal_reached' },
+        ...(Platform.OS === 'android' ? { channelId: 'achievements' } : {}),
       },
       trigger: null,
     });
@@ -73,6 +71,7 @@ export async function sendStreakNotification(streak: number): Promise<void> {
         title: `${streak} Day Streak!`,
         body: `Amazing! You've maintained your streak for ${streak} days. Keep it up!`,
         data: { type: 'streak' },
+        ...(Platform.OS === 'android' ? { channelId: 'achievements' } : {}),
       },
       trigger: null,
     });
@@ -91,6 +90,7 @@ export async function scheduleHourlyReminders(startHour: number = 8, endHour: nu
           title: 'Time to move!',
           body: "Don't forget to get your steps in today.",
           data: { type: 'daily_reminder' },
+          ...(Platform.OS === 'android' ? { channelId: 'reminders' } : {}),
         },
         trigger: {
           type: Notifications.SchedulableTriggerInputTypes.DAILY,
