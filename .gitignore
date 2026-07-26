@@ -47,7 +47,6 @@ tmp-export-test/
 /android/.gradle/
 /android/captures/
 /android/local.properties
-/android/gradle/
 
 # Android / Gradle build artifacts
 **/build/
