@@ -22,6 +22,7 @@ import android.os.PowerManager
 import android.os.SystemClock
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import android.graphics.BitmapFactory
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -270,15 +271,25 @@ class StepTrackerService : Service(), SensorEventListener {
       PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
     )
 
-    return NotificationCompat.Builder(this, CHANNEL_ID)
+    val smallIconResId = resources.getIdentifier("ic_launcher_monochrome", "mipmap", packageName)
+    val fallbackIconResId = resources.getIdentifier("ic_launcher", "mipmap", packageName)
+    val finalSmallIcon = if (smallIconResId != 0) smallIconResId else if (fallbackIconResId != 0) fallbackIconResId else android.R.drawable.ic_dialog_info
+
+    val builder = NotificationCompat.Builder(this, CHANNEL_ID)
       .setContentTitle("Nfit Step Tracker")
       .setContentText("$dailySteps steps today")
-      .setSmallIcon(android.R.drawable.ic_dialog_info)
+      .setSmallIcon(finalSmallIcon)
       .setOngoing(true)
       .setContentIntent(pendingIntent)
       .setPriority(NotificationCompat.PRIORITY_LOW)
       .setCategory(NotificationCompat.CATEGORY_SERVICE)
-      .build()
+
+    val largeIconResId = resources.getIdentifier("ic_launcher", "mipmap", packageName)
+    if (largeIconResId != 0) {
+      builder.setLargeIcon(BitmapFactory.decodeResource(resources, largeIconResId))
+    }
+
+    return builder.build()
   }
 
   private fun startForegroundServiceWithNotification() {
