@@ -328,7 +328,7 @@ const styles = StyleSheet.create({
   chart: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', height: 180 },
   barContainer: { alignItems: 'center', flex: 1 },
   barWrapper: { height: 150, justifyContent: 'flex-end' },
-  bar: { width: '70%', borderRadius: 6, minHeight: 4 },
+  bar: { width: 28, borderRadius: 6, minHeight: 4 },
   barLabel: { fontSize: 12, marginTop: 8 },
   goalLine: { flexDirection: 'row', alignItems: 'center', marginTop: 12, paddingTop: 8, borderTopWidth: 1 },
   goalLineIndicator: { width: 8, height: 8, borderRadius: 4, marginRight: 8 },
